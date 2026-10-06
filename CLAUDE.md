@@ -15,7 +15,7 @@ Stack: Expo SDK 57, React Native, TypeScript (blank-typescript template). Target
      - B3 Hold: node `879:1917`
    - Designer notes ("What changed from v1", "A or B?"): node `879:2204`
    - Variant A (node `879:648`) is NOT being built. Use it only as visual reference for shared parts.
-   - Match Figma exactly for colours, spacing, radii and type. Pull values with the Figma MCP tools; do not estimate from screenshots.
+   - All values (colours, spacing, radii, type, states) are already extracted into `docs/design/DESIGN_SPEC.md`. Build from that file. Do NOT call Figma tools: the account's Figma MCP quota is tiny (a few calls per month). If something is missing from the spec, ask me instead.
 2. **Reference docs (read only):** `docs/reference/`. Internal slides and notes. Never edit, move or commit them (they are gitignored).
 
 ## Scope
