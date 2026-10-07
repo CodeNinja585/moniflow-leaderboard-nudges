@@ -1,0 +1,141 @@
+import type { LeaderboardEntry, Nudge, TrackSummary } from '../types/leaderboard';
+
+export type ScenarioKey = 'rankUp' | 'breakIn' | 'hold';
+
+export interface Scenario {
+  weekNumber: number;
+  endsIn: string;
+  entries: LeaderboardEntry[];
+  currentUser: LeaderboardEntry;
+  nudge: Nudge;
+  summaries: TrackSummary[];
+}
+
+export const scenarios: Record<ScenarioKey, Scenario> = {
+  rankUp: {
+    weekNumber: 41,
+    endsIn: '2d 6h',
+    entries: [
+      { rank: 1, name: 'Edwin Okoro', initials: 'EO', amount: 786.34, isCurrentUser: false },
+      { rank: 2, name: 'Jonadab Onwu', initials: 'JO', amount: 521.40, isCurrentUser: false },
+      { rank: 3, name: 'Jachinma George', initials: 'JG', amount: 269.28, isCurrentUser: false },
+      { rank: 4, name: 'Glad Ezeonu', initials: 'GE', amount: 168.90, isCurrentUser: false },
+      { rank: 5, name: 'Tamunominini A.', initials: 'TA', amount: 96.00, isCurrentUser: false },
+      { rank: 6, name: 'Oluwatosin O.', initials: 'OO', amount: 85.50, isCurrentUser: false },
+      { rank: 7, name: 'Bola Adeyemi', initials: 'BA', amount: 65.30, isCurrentUser: false },
+      { rank: 8, name: 'Femi Adebayo', initials: 'FA', amount: 58.40, isCurrentUser: false },
+      { rank: 9, name: 'Chidi Okafor', initials: 'CO', amount: 51.20, isCurrentUser: false },
+      { rank: 10, name: 'Aisha Bello', initials: 'AB', amount: 48.50, isCurrentUser: false },
+      { rank: 11, name: 'Tunde Eze', initials: 'TE', amount: 46.20, isCurrentUser: false },
+      { rank: 12, name: 'Masud Hashim', initials: 'MH', amount: 44.10, isCurrentUser: true },
+      { rank: 13, name: 'Kemi Nwosu', initials: 'KN', amount: 41.75, isCurrentUser: false },
+      { rank: 14, name: 'Ifeanyi Obi', initials: 'IO', amount: 39.00, isCurrentUser: false },
+      { rank: 15, name: 'Ngozi Eze', initials: 'NE', amount: 35.20, isCurrentUser: false },
+      { rank: 16, name: 'Emeka Nnamdi', initials: 'EN', amount: 32.10, isCurrentUser: false },
+      { rank: 17, name: 'Chioma Nwankwo', initials: 'CN', amount: 29.80, isCurrentUser: false },
+      { rank: 18, name: 'Yusuf Bello', initials: 'YB', amount: 27.50, isCurrentUser: false },
+      { rank: 19, name: 'Amaka Udo', initials: 'AU', amount: 25.10, isCurrentUser: false },
+      { rank: 20, name: 'Zainab Musa', initials: 'ZM', amount: 23.70, isCurrentUser: false },
+    ],
+    currentUser: { rank: 12, name: 'Masud Hashim', initials: 'MH', amount: 44.10, isCurrentUser: true },
+    nudge: {
+      state: 'rank_up',
+      message: 'Spend about ₦250 on MTN data to earn ₦4.50 more cashback and move up to 10th place, where the prize is ₦650.',
+      headline: '₦4.50 to 10th, win ₦650',
+      subline: 'About ₦250 in MTN data',
+      gapAmount: 4.50,
+      targetRank: 10,
+      targetPrize: 650,
+      ctaLabel: 'Buy',
+    },
+    summaries: [
+      { track: 'cashback', userRank: 12 },
+      { track: 'referrals', userRank: null },
+      { track: 'volume', userRank: 7 },
+    ],
+  },
+  hold: {
+    weekNumber: 41,
+    endsIn: '5h 40m',
+    entries: [
+      { rank: 1, name: 'Edwin Okoro', initials: 'EO', amount: 786.34, isCurrentUser: false },
+      { rank: 2, name: 'Jonadab Onwu', initials: 'JO', amount: 521.40, isCurrentUser: false },
+      { rank: 3, name: 'Jachinma George', initials: 'JG', amount: 269.28, isCurrentUser: false },
+      { rank: 4, name: 'Glad Ezeonu', initials: 'GE', amount: 168.90, isCurrentUser: false },
+      { rank: 5, name: 'Tamunominini A.', initials: 'TA', amount: 96.00, isCurrentUser: false },
+      { rank: 6, name: 'Oluwatosin O.', initials: 'OO', amount: 85.50, isCurrentUser: false },
+      { rank: 7, name: 'Bola Adeyemi', initials: 'BA', amount: 65.30, isCurrentUser: false },
+      { rank: 8, name: 'Onyeka Ude', initials: 'OU', amount: 54.00, isCurrentUser: false },
+      { rank: 9, name: 'Chidi Okafor', initials: 'CO', amount: 51.20, isCurrentUser: false },
+      { rank: 10, name: 'Masud Hashim', initials: 'MH', amount: 48.50, isCurrentUser: true },
+      { rank: 11, name: 'Tunde Eze', initials: 'TE', amount: 46.20, isCurrentUser: false },
+      { rank: 12, name: 'Kemi Nwosu', initials: 'KN', amount: 44.10, isCurrentUser: false },
+      { rank: 13, name: 'Ifeanyi Obi', initials: 'IO', amount: 39.00, isCurrentUser: false },
+      { rank: 14, name: 'Ngozi Eze', initials: 'NE', amount: 35.20, isCurrentUser: false },
+      { rank: 15, name: 'Emeka Nnamdi', initials: 'EN', amount: 32.10, isCurrentUser: false },
+      { rank: 16, name: 'Chioma Nwankwo', initials: 'CN', amount: 29.80, isCurrentUser: false },
+      { rank: 17, name: 'Yusuf Bello', initials: 'YB', amount: 27.50, isCurrentUser: false },
+      { rank: 18, name: 'Amaka Udo', initials: 'AU', amount: 25.10, isCurrentUser: false },
+      { rank: 19, name: 'Sade Okon', initials: 'SO', amount: 24.20, isCurrentUser: false },
+      { rank: 20, name: 'Zainab Musa', initials: 'ZM', amount: 23.70, isCurrentUser: false },
+    ],
+    currentUser: { rank: 10, name: 'Masud Hashim', initials: 'MH', amount: 48.50, isCurrentUser: true },
+    nudge: {
+      state: 'hold',
+      message: 'You are only ₦2.30 ahead of 11th place. Slip one place and your prize drops from ₦650 to ₦500.',
+      headline: 'Only ₦2.30 ahead of 11th',
+      subline: 'Slip one place and your prize drops to ₦500',
+      gapAmount: 2.30,
+      targetRank: 10,
+      targetPrize: 650,
+      ctaLabel: 'Hold',
+    },
+    summaries: [
+      { track: 'cashback', userRank: 10 },
+      { track: 'referrals', userRank: 18 },
+      { track: 'volume', userRank: 4 },
+    ],
+  },
+  breakIn: {
+    weekNumber: 41,
+    endsIn: '2d 6h',
+    entries: [
+      { rank: 1, name: 'Edwin Okoro', initials: 'EO', amount: 786.34, isCurrentUser: false },
+      { rank: 2, name: 'Jonadab Onwu', initials: 'JO', amount: 521.40, isCurrentUser: false },
+      { rank: 3, name: 'Jachinma George', initials: 'JG', amount: 269.28, isCurrentUser: false },
+      { rank: 4, name: 'Glad Ezeonu', initials: 'GE', amount: 168.90, isCurrentUser: false },
+      { rank: 5, name: 'Tamunominini A.', initials: 'TA', amount: 96.00, isCurrentUser: false },
+      { rank: 6, name: 'Oluwatosin O.', initials: 'OO', amount: 85.50, isCurrentUser: false },
+      { rank: 7, name: 'Bola Adeyemi', initials: 'BA', amount: 65.30, isCurrentUser: false },
+      { rank: 8, name: 'Onyeka Ude', initials: 'OU', amount: 54.00, isCurrentUser: false },
+      { rank: 9, name: 'Chidi Okafor', initials: 'CO', amount: 51.20, isCurrentUser: false },
+      { rank: 10, name: 'Aisha Bello', initials: 'AB', amount: 48.50, isCurrentUser: false },
+      { rank: 11, name: 'Tunde Eze', initials: 'TE', amount: 46.20, isCurrentUser: false },
+      { rank: 12, name: 'Kemi Nwosu', initials: 'KN', amount: 44.10, isCurrentUser: false },
+      { rank: 13, name: 'Ifeanyi Obi', initials: 'IO', amount: 39.00, isCurrentUser: false },
+      { rank: 14, name: 'Ngozi Eze', initials: 'NE', amount: 35.20, isCurrentUser: false },
+      { rank: 15, name: 'Emeka Nnamdi', initials: 'EN', amount: 32.10, isCurrentUser: false },
+      { rank: 16, name: 'Chioma Nwankwo', initials: 'CN', amount: 29.80, isCurrentUser: false },
+      { rank: 17, name: 'Yusuf Bello', initials: 'YB', amount: 27.50, isCurrentUser: false },
+      { rank: 18, name: 'Amaka Udo', initials: 'AU', amount: 25.10, isCurrentUser: false },
+      { rank: 19, name: 'Sade Okon', initials: 'SO', amount: 24.20, isCurrentUser: false },
+      { rank: 20, name: 'Zainab Musa', initials: 'ZM', amount: 23.70, isCurrentUser: false },
+    ],
+    currentUser: { rank: 34, name: 'Masud Hashim', initials: 'MH', amount: 4.20, isCurrentUser: true },
+    nudge: {
+      state: 'break_in',
+      message: 'Spend about ₦1,000 on MTN airtime to earn ₦19.60 more cashback and break into the Top 20, where the prize is ₦400.',
+      headline: '₦19.60 to make the Top 20',
+      subline: 'About ₦1,000 in MTN airtime',
+      gapAmount: 19.60,
+      targetRank: 20,
+      targetPrize: 400,
+      ctaLabel: 'Buy',
+    },
+    summaries: [
+      { track: 'cashback', userRank: null },
+      { track: 'referrals', userRank: null },
+      { track: 'volume', userRank: 27 },
+    ],
+  },
+};

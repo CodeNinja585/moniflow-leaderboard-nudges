@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
@@ -10,7 +10,7 @@ import {
   Inter_700Bold,
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
-import { colors, fonts } from './src/theme/tokens';
+import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,23 +34,9 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Foundation ready</Text>
-      <StatusBar style="dark" />
-    </View>
+    <SafeAreaProvider>
+      <LeaderboardScreen />
+      <StatusBar style="light" />
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.screenBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontFamily: fonts.extraBold,
-    fontSize: 20,
-    color: colors.navyText,
-  },
-});
