@@ -91,7 +91,11 @@ export function PurchaseSheet({ preview, onCancel, onComplete }: Props) {
               />
               <SummaryRow
                 label="Your prize"
-                value={`${prizeText(rankBefore, onBoardBefore)} to ${prizeText(rankAfter, onBoardAfter)}`}
+                value={
+                  prizeText(rankBefore, onBoardBefore) === prizeText(rankAfter, onBoardAfter)
+                    ? `${prizeText(rankAfter, onBoardAfter)}, protected`
+                    : `${prizeText(rankBefore, onBoardBefore)} to ${prizeText(rankAfter, onBoardAfter)}`
+                }
               />
 
               <View style={styles.actions}>

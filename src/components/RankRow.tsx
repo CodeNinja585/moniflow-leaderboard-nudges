@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Medal } from 'lucide-react-native';
 import { AppText } from './AppText';
@@ -31,7 +32,7 @@ const VARIANTS = {
   },
 } as const;
 
-export function RankRow({ entry, variant }: Props) {
+function RankRowBase({ entry, variant }: Props) {
   const v = VARIANTS[variant];
   const subline = variant === 'off'
     ? 'Not on the board yet'
@@ -80,6 +81,9 @@ export function RankRow({ entry, variant }: Props) {
     </View>
   );
 }
+
+/** Memoised so scrolling and purchases only re-render rows whose data changed. */
+export const RankRow = memo(RankRowBase);
 
 const styles = StyleSheet.create({
   card: {

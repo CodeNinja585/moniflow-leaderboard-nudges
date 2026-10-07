@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   LayoutAnimation,
   LayoutChangeEvent,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   ScrollView,
   StyleSheet,
   View,
@@ -57,7 +56,8 @@ export function LeaderboardScreen() {
   const autoScrolled = useRef(false);
   const animateScroll = useRef(false);
   const [viewportHeight, setViewportHeight] = useState(0);
-  const [scrollY, setScrollY] = useState(0);
+  // Scroll position lives on the native side so the sticky row never waits for JavaScript.
+  const scrollY = useRef(new Animated.Value(0)).current;
   const [userBlock, setUserBlock] = useState<{ y: number; h: number } | null>(null);
   const [showScrolledCaption, setShowScrolledCaption] = useState(false);
 
@@ -66,12 +66,12 @@ export function LeaderboardScreen() {
     autoScrolled.current = false;
     animateScroll.current = false;
     setUserBlock(null);
-    setScrollY(0);
+    scrollY.setValue(0);
     setShowScrolledCaption(false);
     setPurchase(null);
     setUser(scenarios[SCENARIO_ORDER[next]].currentUser);
     setScenarioIndex(next);
-  }, [scenarioIndex]);
+  }, [scenarioIndex, scrollY]);
 
   // Tapping Buy or Hold opens the purchase sheet with a preview of the outcome.
   const onNudgePress = useCallback(
@@ -122,16 +122,26 @@ export function LeaderboardScreen() {
     [currentUser.rank],
   );
 
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setScrollY(e.nativeEvent.contentOffset.y);
-  };
+  const onScroll = useMemo(
+    () => Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true }),
+    [scrollY],
+  );
 
-  // Sticky row: dock the user's row when they are off the board, or their row is out of view.
-  const userOutOfView =
-    userBlock !== null &&
-    viewportHeight > 0 &&
-    (userBlock.y + userBlock.h < scrollY || userBlock.y > scrollY + viewportHeight);
-  const showDock = track === 'cashback' && nudge !== null && (!onBoard || userOutOfView);
+  // Sticky row. Off the board: always docked. On the board: the dock slides in only while
+  // the user's own row is fully out of view. Driven natively from the scroll value, no lag.
+  const DOCK_HIDDEN_OFFSET = 260;
+  const dockTranslate = useMemo(() => {
+    if (!onBoard) return 0;
+    if (!userBlock || viewportHeight === 0) return DOCK_HIDDEN_OFFSET;
+    const appearBelow = userBlock.y - viewportHeight; // row is below the viewport before this
+    const appearAbove = userBlock.y + userBlock.h; // row is above the viewport after this
+    return scrollY.interpolate({
+      inputRange: [appearBelow - 1, appearBelow, appearAbove, appearAbove + 1],
+      outputRange: [0, DOCK_HIDDEN_OFFSET, DOCK_HIDDEN_OFFSET, 0],
+      extrapolate: 'clamp',
+    });
+  }, [onBoard, userBlock, viewportHeight, scrollY]);
+  const showDock = track === 'cashback' && nudge !== null;
 
   return (
     <View style={styles.screen}>
@@ -153,55 +163,61 @@ export function LeaderboardScreen() {
               This leaderboard is on the way.
             </AppText>
           </View>
-        ) : (
-          <>
-            {showScrolledCaption ? (
-              <AppText size={10} color={colors.mutedText} style={styles.caption}>
-                Scrolled to you
-              </AppText>
-            ) : null}
+        ) : null}
 
-            <ScrollView
-              key={scenarioKey}
-              ref={scrollRef}
-              style={styles.list}
-              contentContainerStyle={styles.listContent}
-              onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
-              onScroll={onScroll}
-              onScrollBeginDrag={() => setShowScrolledCaption(false)}
-              scrollEventThrottle={32}
-              showsVerticalScrollIndicator={false}
-            >
-              {board.map((entry, i) => {
-                const next = board[i + 1];
-                const divider = next && isTierBoundary(entry.rank, next.rank);
-                const isMe = entry.isCurrentUser;
-                return (
-                  <View
-                    key={isMe ? 'me' : entry.name}
-                    onLayout={isMe ? onUserLayout : undefined}
-                  >
-                    <View style={styles.rowGap}>
-                      <RankRow entry={entry} variant={isMe ? 'current' : 'standard'} />
-                      {isMe && nudge ? <NudgeStrip nudge={nudge} onPress={onNudgePress} /> : null}
-                    </View>
-                    {divider ? <TierDivider prizeAbove={getPrizeForRank(entry.rank)} /> : null}
+        {/* Kept mounted while other tabs are open, so switching back is instant. */}
+        <View style={[styles.flex, track !== 'cashback' && styles.hidden]}>
+          {showScrolledCaption ? (
+            <AppText size={10} color={colors.mutedText} style={styles.caption}>
+              Scrolled to you
+            </AppText>
+          ) : null}
+
+          <Animated.ScrollView
+            key={scenarioKey}
+            ref={scrollRef}
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
+            onScroll={onScroll}
+            onScrollBeginDrag={() => setShowScrolledCaption(false)}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {board.map((entry, i) => {
+              const next = board[i + 1];
+              const divider = next && isTierBoundary(entry.rank, next.rank);
+              const isMe = entry.isCurrentUser;
+              return (
+                <View
+                  key={isMe ? 'me' : entry.name}
+                  onLayout={isMe ? onUserLayout : undefined}
+                >
+                  <View style={styles.rowGap}>
+                    <RankRow entry={entry} variant={isMe ? 'current' : 'standard'} />
+                    {isMe && nudge ? <NudgeStrip nudge={nudge} onPress={onNudgePress} /> : null}
                   </View>
-                );
-              })}
-              <BoardFooter />
-            </ScrollView>
-          </>
-        )}
+                  {divider ? <TierDivider prizeAbove={getPrizeForRank(entry.rank)} /> : null}
+                </View>
+              );
+            })}
+            <BoardFooter />
+          </Animated.ScrollView>
+        </View>
       </View>
 
       {showDock && nudge ? (
-        <DockedUserRow
-          user={currentUser}
-          nudge={nudge}
-          onBoard={onBoard}
-          onNudgePress={onNudgePress}
-        />
+        <Animated.View
+          pointerEvents="box-none"
+          style={[styles.dockLayer, { transform: [{ translateY: dockTranslate }] }]}
+        >
+          <DockedUserRow
+            user={currentUser}
+            nudge={nudge}
+            onBoard={onBoard}
+            onNudgePress={onNudgePress}
+          />
+        </Animated.View>
       ) : null}
 
       <PurchaseSheet
@@ -217,7 +233,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.screenBg },
   body: { flex: 1, paddingHorizontal: spacing.screenX, paddingTop: spacing.bodyTop },
   caption: { textAlign: 'center', marginTop: 12 },
+  flex: { flex: 1 },
+  hidden: { display: 'none' },
   list: { flex: 1 },
+  dockLayer: { position: 'absolute', left: 0, right: 0, bottom: 0, top: 0 },
   // Room for the docked row so the footer can always scroll clear of it.
   listContent: { paddingBottom: 150 },
   rowGap: { marginTop: spacing.rowGap },

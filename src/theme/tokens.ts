@@ -23,6 +23,7 @@ export const colors = {
   tealSoft: '#EFFBF8',
   amber: '#F0B65A',
   amberSoft: '#FFF6E6',
+  amberFill: '#FBDDA6',
   amberText: '#C77700',
   offPlate: '#A5AFC4',
   offRing: '#C7CFDF',
