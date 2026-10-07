@@ -17,6 +17,9 @@ export interface Nudge {
   targetRank: number;
   targetPrize: number;
   ctaLabel: string;
+  /** Suggested purchase that closes the gap (demo engine; proposed to the data team). */
+  suggestedSpend?: number;
+  product?: string;
 }
 
 export interface LeaderboardEntry {
