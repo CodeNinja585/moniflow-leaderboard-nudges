@@ -6,10 +6,11 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check, Gift, Phone, ShieldCheck, Tv, Wifi, X, Zap } from 'lucide-react-native';
+import { Check, ChevronLeft, Gift, Phone, ShieldCheck, Tv, Wifi, X, Zap } from 'lucide-react-native';
 import { AppText } from './AppText';
 import { PinPad } from './PinPad';
 import { colors, radii } from '../theme/tokens';
@@ -18,6 +19,7 @@ import { MIN_ELIGIBLE_CASHBACK, getPrizeForRank } from '../lib/prizes';
 import { PaySource, cashbackRate, offerAt, ordinal, sizeOffer } from '../lib/nudgeEngine';
 import {
   DEFAULT_TARGETS,
+  FREE_AMOUNT_RULES,
   OTHER_SERVICES,
   QUICK_AMOUNTS,
   plansFor,
@@ -53,6 +55,8 @@ interface Props {
 type Step = 'confirm' | 'processing' | 'success';
 const PROCESSING_MS = 1400;
 const MOCK_CASHBACK_BALANCE = 23.25;
+/** Daily limit shown on the live purchase screens. */
+const DAILY_LIMIT = 50000;
 
 const ICONS = { airtime: Phone, data: Wifi, cable: Tv, electricity: Zap, bank_transfer: Phone };
 const TYPE_NAMES = {
@@ -88,6 +92,10 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
   const [showOthers, setShowOthers] = useState(false);
   const [applyCashback, setApplyCashback] = useState(false);
   const [paid, setPaid] = useState<{ offer: Offer; outcome: PurchaseOutcome } | null>(null);
+  /** Typed amount for free-amount services; null when a chip or the suggestion is in use. */
+  const [amountText, setAmountText] = useState<string | null>(null);
+  /** Earlier choices, so Back steps back through them instead of closing the sheet. */
+  const [history, setHistory] = useState<{ offer: Offer; showOthers: boolean; amountText: string | null }[]>([]);
 
   useEffect(() => {
     if (request) {
@@ -96,6 +104,8 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
       setShowOthers(false);
       setApplyCashback(false);
       setPaid(null);
+      setAmountText(null);
+      setHistory([]);
     }
   }, [request]);
 
@@ -111,12 +121,48 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
   const { nudge, recs } = request;
   const isHoldOnUsual = nudge.state === 'hold' && offer.recRank === nudge.offer.recRank;
 
+  const remember = () => setHistory((h) => [...h, { offer, showOthers, amountText }]);
+
+  const goBack = () => {
+    const prev = history[history.length - 1];
+    if (!prev) return onCancel();
+    setOffer(prev.offer);
+    setShowOthers(prev.showOthers);
+    setAmountText(prev.amountText);
+    setHistory((h) => h.slice(0, -1));
+  };
+
+  const toggleOthers = () => {
+    remember();
+    setShowOthers((v) => !v);
+  };
+
   const selectSource = (src: PaySource) => {
     const sized = sizeOffer(src, nudge.cashbackTarget);
     if (sized) {
+      remember();
       setOffer(sized);
       setShowOthers(false);
+      setAmountText(null);
     }
+  };
+
+  const minAmount = FREE_AMOUNT_RULES[offer.type]?.min ?? 0;
+  const typedAmount = amountText === null ? null : Number(amountText || 0);
+  const amountError =
+    typedAmount === null
+      ? null
+      : typedAmount < minAmount
+        ? `Minimum is ${formatNaira(minAmount, { decimals: false })}`
+        : typedAmount > DAILY_LIMIT
+          ? `Daily limit is ${formatNaira(DAILY_LIMIT, { decimals: false })}`
+          : null;
+
+  const onAmountChange = (text: string) => {
+    const clean = text.replace(/[^0-9]/g, '').slice(0, 7);
+    setAmountText(clean);
+    const n = Number(clean || 0);
+    if (n >= minAmount && n <= DAILY_LIMIT) setOffer(offerAt({ ...offer, rank: offer.recRank }, n));
   };
 
   const confirmPayment = () => {
@@ -136,7 +182,7 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
   const prizeAfter = prizeText(outcome.rankAfter, outcome.onBoardAfter);
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={step === 'confirm' ? onCancel : undefined}>
+    <Modal visible transparent animationType="slide" onRequestClose={step === 'confirm' ? goBack : undefined}>
       <View style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={step === 'confirm' ? onCancel : undefined} />
         <View style={[styles.sheet, { paddingBottom: 16 + insets.bottom }]}>
@@ -145,6 +191,11 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
           {step === 'confirm' ? (
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <View style={styles.headerRow}>
+                {history.length ? (
+                  <Pressable onPress={goBack} hitSlop={10} style={styles.backBtn} accessibilityLabel="Back">
+                    <ChevronLeft size={24} color={colors.navyText} />
+                  </Pressable>
+                ) : null}
                 <AppText weight="extraBold" size={17} color={colors.navyText} style={styles.flex}>
                   {isHoldOnUsual ? 'Protect your spot' : 'Confirm purchase'}
                 </AppText>
@@ -178,7 +229,7 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
                   );
                 })}
                 <Pressable
-                  onPress={() => setShowOthers((v) => !v)}
+                  onPress={toggleOthers}
                   style={[styles.chip, offer.recRank === null && styles.chipActive]}
                 >
                   <AppText weight="semiBold" size={12} color={offer.recRank === null ? colors.white : colors.navyText}>
@@ -239,6 +290,34 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
                 </View>
               </View>
 
+              {/* Type any amount (free-amount services only), like the live purchase screens. */}
+              {!plans ? (
+                <View style={styles.amountBlock}>
+                  <View style={styles.amountLabelRow}>
+                    <AppText weight="semiBold" size={12} color={colors.tabInactiveText}>Amount</AppText>
+                    <AppText weight="semiBold" size={12} color={colors.pinBlue}>
+                      Min. {formatNaira(minAmount, { decimals: false })}
+                    </AppText>
+                  </View>
+                  <View style={[styles.amountField, amountError ? styles.amountFieldError : null]}>
+                    <AppText weight="semiBold" size={16} color={colors.mutedText}>₦</AppText>
+                    <TextInput
+                      value={amountText ?? String(offer.spend)}
+                      onChangeText={onAmountChange}
+                      onFocus={() => amountText === null && setAmountText(String(offer.spend))}
+                      keyboardType="number-pad"
+                      placeholder="Enter amount"
+                      placeholderTextColor={colors.mutedText}
+                      style={styles.amountInput}
+                      accessibilityLabel="Amount"
+                    />
+                  </View>
+                  {amountError ? (
+                    <AppText size={11} color={colors.belowPlate} style={styles.amountErrorText}>{amountError}</AppText>
+                  ) : null}
+                </View>
+              ) : null}
+
               {/* Change the amount or plan. */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
                 {plans
@@ -261,7 +340,10 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
                       return (
                         <Pressable
                           key={a}
-                          onPress={() => setOffer(offerAt({ ...offer, rank: offer.recRank }, a))}
+                          onPress={() => {
+                            setAmountText(null);
+                            setOffer(offerAt({ ...offer, rank: offer.recRank }, a));
+                          }}
                           style={[styles.smallChip, active && styles.smallChipActive]}
                         >
                           <AppText weight={active ? 'bold' : 'regular'} size={11.5} color={active ? colors.tabActiveBg : colors.navyText}>
@@ -304,11 +386,17 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
                 <Switch value={applyCashback} onValueChange={setApplyCashback} />
               </View>
 
-              <PinPad
-                key={`${offer.label}-${offer.spend}`}
-                promptMessage={`Pay ${formatNaira(offer.spend)} for ${offer.label}`}
-                onConfirmed={confirmPayment}
-              />
+              {amountError ? (
+                <View style={styles.pinBlocked}>
+                  <AppText size={12} color={colors.mutedText}>Enter a valid amount to continue</AppText>
+                </View>
+              ) : (
+                <PinPad
+                  key={`${offer.label}-${offer.spend}`}
+                  promptMessage={`Pay ${formatNaira(offer.spend)} for ${offer.label}`}
+                  onConfirmed={confirmPayment}
+                />
+              )}
 
               <View style={styles.secureNote}>
                 <ShieldCheck size={18} color={colors.mutedText} />
@@ -398,6 +486,38 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   flexShrink: { flexShrink: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  backBtn: { marginRight: 6, marginLeft: -4 },
+  amountBlock: { marginBottom: 10 },
+  amountLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  amountField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 52,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.tabsBorder,
+    backgroundColor: colors.white,
+  },
+  amountFieldError: { borderColor: colors.belowPlate },
+  amountInput: {
+    flex: 1,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 18,
+    color: colors.navyText,
+    textAlign: 'right',
+    paddingVertical: 0,
+  },
+  amountErrorText: { marginTop: 4 },
+  pinBlocked: {
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.pinKeyBorder,
+    backgroundColor: colors.pinPanel,
+  },
   sectionLabel: { letterSpacing: 0.6, marginBottom: 6 },
   chips: { gap: 8, paddingRight: 8 },
   chip: {

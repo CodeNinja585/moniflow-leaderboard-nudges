@@ -33,7 +33,7 @@ In scope:
 - The demo user is Masud Hashim everywhere.
 - Prize under each name in muted text, and tier divider lines (e.g. "₦650 above").
 
-- Payment sheet (`PurchaseSheet` + `PinPad`) mirrors the live Confirm Purchase screen: order summary, service charge, Apply Cashback toggle (no effect on the maths), shuffled PIN keypad (any 4 digits accepted in the demo), optional "Use fingerprint" via expo-local-authentication. Users can switch to their #2 or #3, or "Something else", and change the amount or plan; a live preview shows the rank and prize effect before paying.
+- Payment sheet (`PurchaseSheet` + `PinPad`) mirrors the live Confirm Purchase screen: order summary, service charge, Apply Cashback toggle (no effect on the maths), shuffled PIN keypad (any 4 digits accepted in the demo), a small fingerprint icon beside the PIN boxes (expo-local-authentication), a typed amount field with min and daily-limit checks, and a Back arrow (and Android back) that steps back through earlier choices before closing. Users can switch to their #2 or #3, or "Something else", and change the amount or plan; a live preview shows the rank and prize effect before paying.
 
 Coming next (not built yet): the home screen with "Suggested for you" and a simplified Rewards screen.
 

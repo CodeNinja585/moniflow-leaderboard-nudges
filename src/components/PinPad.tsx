@@ -24,7 +24,7 @@ function shuffled(): number[] {
 
 /**
  * Transaction PIN entry matching the live app: 4 boxes, a shuffled keypad, Done.
- * Demo: any 4 digits are accepted. Proposal: an optional "Use fingerprint" path.
+ * Demo: any 4 digits are accepted. Proposal: a small fingerprint icon beside the boxes as an optional shortcut.
  */
 export function PinPad({ promptMessage, onConfirmed }: Props) {
   const digits = useMemo(shuffled, []);
@@ -90,12 +90,25 @@ export function PinPad({ promptMessage, onConfirmed }: Props) {
           </View>
         </View>
 
-        <View style={styles.boxes}>
-          {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-            <View key={i} style={[styles.box, i < pin.length && styles.boxFilled]}>
-              {i < pin.length ? <View style={styles.dot} /> : null}
-            </View>
-          ))}
+        <View style={styles.boxesRow}>
+          <View style={styles.boxes}>
+            {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+              <View key={i} style={[styles.box, i < pin.length && styles.boxFilled]}>
+                {i < pin.length ? <View style={styles.dot} /> : null}
+              </View>
+            ))}
+          </View>
+          {canUseBiometrics ? (
+            <Pressable
+              style={({ pressed }) => [styles.bioIcon, pressed && styles.keyPressed]}
+              onPress={useFingerprint}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="Pay with fingerprint"
+            >
+              <Fingerprint size={22} color={colors.tabActiveBg} />
+            </Pressable>
+          ) : null}
         </View>
 
         {rows.map((row, r) => (
@@ -121,12 +134,6 @@ export function PinPad({ promptMessage, onConfirmed }: Props) {
         </View>
       </View>
 
-      {canUseBiometrics ? (
-        <Pressable style={styles.bioButton} onPress={useFingerprint} accessibilityRole="button">
-          <Fingerprint size={20} color={colors.tabActiveBg} />
-          <AppText weight="semiBold" size={13} color={colors.tabActiveBg}>Use fingerprint</AppText>
-        </Pressable>
-      ) : null}
       {bioError ? (
         <AppText size={11} color={colors.belowPlate} style={styles.bioError}>{bioError}</AppText>
       ) : null}
@@ -154,7 +161,18 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-start' },
   sub: { marginTop: 3 },
   secured: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  boxes: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginVertical: 14 },
+  boxesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 14 },
+  boxes: { flexDirection: 'row', gap: 10 },
+  bioIcon: {
+    position: 'absolute',
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E8F0FC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   box: {
     width: 46,
     height: 46,
@@ -181,16 +199,5 @@ const styles = StyleSheet.create({
   keyPressed: { backgroundColor: colors.screenBg },
   doneKey: { backgroundColor: colors.pinBlue, borderColor: colors.pinBlue },
   doneDisabled: { opacity: 0.5 },
-  bioButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 12,
-    height: 46,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.tabActiveBg,
-  },
   bioError: { textAlign: 'center', marginTop: 6 },
 });
