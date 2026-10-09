@@ -35,7 +35,8 @@ In scope:
 
 - Payment sheet (`PurchaseSheet` + `PinPad`) mirrors the live Confirm Purchase screen: order summary, service charge, Apply Cashback toggle (no effect on the maths), shuffled PIN keypad (any 4 digits accepted in the demo), a small fingerprint icon beside the PIN boxes (expo-local-authentication), a typed amount field with min and daily-limit checks, and a Back arrow (and Android back) that steps back through earlier choices before closing. Users can switch to their #2 or #3, or "Something else", and change the amount or plan; a live preview shows the rank and prize effect before paying.
 
-Coming next (not built yet): the home screen with "Suggested for you" and a simplified Rewards screen.
+- App flow (`App.tsx`): Home (Suggested for you + Switch Menu) and Rewards share a bottom nav; Rewards' Leaderboard button and Home's leaderboard line open the Leaderboard. Android back steps back. Scenario, user and nudge live in `src/state/DemoContext.tsx`, so a purchase on any screen moves Masud on the board.
+- Home "Suggested for you" (Figma option A plus a dismiss X): the user's top 3 from the recommendation engine, the usual one outlined; tapping one, or Electricity/Airtime/Data/Cable in the Switch Menu, opens the same payment sheet sized to the current leaderboard goal.
 
 Out of scope: Variant A, any real API calls, auth, iOS, betting, deposits, wallet top-ups and vouchers as suggestions.
 
@@ -82,7 +83,8 @@ src/
   lib/          pure logic: tier lookup, gap calculation, formatting. NO React or React Native imports here, so it can move to any stack.
   theme/        tokens pulled from Figma (colours, spacing, radii, type)
   components/   presentational components
-  screens/      LeaderboardScreen
+  state/        DemoContext (shared demo scenario, user and nudge)
+  screens/      HomeScreen, RewardsScreen, LeaderboardScreen
 ```
 
 ## Rules for working in this repo

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   LayoutAnimation,
@@ -15,32 +15,24 @@ import { TierDivider } from '../components/TierDivider';
 import { DockedUserRow } from '../components/DockedUserRow';
 import { AppText } from '../components/AppText';
 import { BoardFooter } from '../components/BoardFooter';
-import { PurchaseOutcome, PurchaseRequest, PurchaseSheet } from '../components/PurchaseSheet';
+import { PurchaseRequest, PurchaseSheet } from '../components/PurchaseSheet';
 import { colors, sizes, spacing } from '../theme/tokens';
 import { getPrizeForRank, isTierBoundary } from '../lib/prizes';
-import { applyPurchase, computeNudge, rankBoard } from '../lib/nudgeEngine';
-import { scenarios, ScenarioKey } from '../data/mockLeaderboard';
-import { recommendations } from '../data/mockRecommendations';
+import { scenarios } from '../data/mockLeaderboard';
+import { useDemo } from '../state/DemoContext';
 import { MIN_ELIGIBLE_CASHBACK } from '../lib/prizes';
-import type { LeaderboardEntry, Nudge, Offer, Track, TrackSummary } from '../types/leaderboard';
+import type { Nudge, Offer, Track, TrackSummary } from '../types/leaderboard';
 
-const SCENARIO_ORDER: ScenarioKey[] = ['rankUp', 'hold', 'breakIn', 'underMin', 'empty'];
 const ROWS_ABOVE_USER = 3;
 
-export function LeaderboardScreen() {
-  const [scenarioIndex, setScenarioIndex] = useState(0);
-  const scenarioKey = SCENARIO_ORDER[scenarioIndex];
-  const scenario = scenarios[scenarioKey];
+interface Props {
+  onBack?: () => void;
+}
 
-  // Everyone except the signed-in user. The user's cashback lives in state so purchases can move them.
-  const others = useMemo(
-    () => scenario.entries.filter((e) => !e.isCurrentUser),
-    [scenario],
-  );
-  const [user, setUser] = useState<LeaderboardEntry>(scenario.currentUser);
-  const ranked = useMemo(() => rankBoard(others, user), [others, user]);
-  const recs = recommendations[scenarioKey];
-  const nudge = useMemo(() => computeNudge(ranked, recs), [ranked, recs]);
+export function LeaderboardScreen({ onBack }: Props) {
+  // Board, user and nudge are shared with Home, so purchases anywhere move Masud here too.
+  const { scenarioKey, scenarioVersion, cycleScenario, ranked, recs, nudge, simulate, completePurchase } = useDemo();
+  const scenario = scenarios[scenarioKey];
   const { board, onBoard } = ranked;
   const currentUser = ranked.user;
 
@@ -64,36 +56,18 @@ export function LeaderboardScreen() {
   const [userBlock, setUserBlock] = useState<{ y: number; h: number } | null>(null);
   const [showScrolledCaption, setShowScrolledCaption] = useState(false);
 
-  const cycleScenario = useCallback(() => {
-    const next = (scenarioIndex + 1) % SCENARIO_ORDER.length;
+  // Reset scroll position and caches whenever the demo scenario changes.
+  useEffect(() => {
     autoScrolled.current = false;
     animateScroll.current = false;
     setUserBlock(null);
     scrollY.setValue(0);
     setShowScrolledCaption(false);
     setPurchase(null);
-    setUser(scenarios[SCENARIO_ORDER[next]].currentUser);
-    setScenarioIndex(next);
-  }, [scenarioIndex, scrollY]);
+  }, [scenarioVersion, scrollY]);
 
   // Tapping Buy or Hold opens the payment sheet. The user can switch to another service there.
   const onNudgePress = useCallback((n: Nudge) => setPurchase({ nudge: n, recs }), [recs]);
-
-  // Live preview of what any purchase would do to the user's rank, before paying.
-  const simulate = useCallback(
-    (offer: Offer): PurchaseOutcome => {
-      const { before, after, cashback } = applyPurchase(others, user, offer);
-      return {
-        cashback,
-        amountAfter: after.user.amount,
-        rankBefore: before.user.rank,
-        rankAfter: after.user.rank,
-        onBoardBefore: before.onBoard,
-        onBoardAfter: after.onBoard,
-      };
-    },
-    [others, user],
-  );
 
   const onPurchaseComplete = useCallback((offer: Offer) => {
     setPurchase(null);
@@ -101,8 +75,8 @@ export function LeaderboardScreen() {
     // Re-scroll to the user's new position once the list re-lays out.
     autoScrolled.current = false;
     animateScroll.current = true;
-    setUser((u) => ({ ...u, amount: Math.round((u.amount + offer.cashback) * 100) / 100 }));
-  }, []);
+    completePurchase(offer);
+  }, [completePurchase]);
 
   const onUserLayout = useCallback(
     (e: LayoutChangeEvent) => {
@@ -148,6 +122,7 @@ export function LeaderboardScreen() {
       <LeaderboardHeader
         weekNumber={scenario.weekNumber}
         endsIn={scenario.endsIn}
+        onBack={onBack}
         onWeekLongPress={cycleScenario}
       />
 
@@ -174,7 +149,7 @@ export function LeaderboardScreen() {
           ) : null}
 
           <Animated.ScrollView
-            key={scenarioKey}
+            key={`${scenarioKey}-${scenarioVersion}`}
             ref={scrollRef}
             style={styles.list}
             contentContainerStyle={[

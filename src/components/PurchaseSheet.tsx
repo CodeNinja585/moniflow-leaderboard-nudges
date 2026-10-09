@@ -48,8 +48,10 @@ interface Props {
   /** Previews what an offer would do to the user's rank, without paying. */
   simulate: (offer: Offer) => PurchaseOutcome;
   onCancel: () => void;
-  /** Called after the success step, when the user taps through to the board. */
+  /** Called after the success step, when the user taps through. */
   onComplete: (offer: Offer) => void;
+  /** Success button label. Leaderboard: "See my new rank"; Home: "Done". */
+  completeLabel?: string;
 }
 
 type Step = 'confirm' | 'processing' | 'success';
@@ -85,7 +87,7 @@ function defaultTarget(type: PaySource['type'], recs: ServiceRecommendation[]) {
   return type === 'electricity' ? DEFAULT_TARGETS.meter : DEFAULT_TARGETS.smartcard;
 }
 
-export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props) {
+export function PurchaseSheet({ request, simulate, onCancel, onComplete, completeLabel = 'See my new rank' }: Props) {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>('confirm');
   const [offer, setOffer] = useState<Offer | null>(null);
@@ -434,7 +436,7 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete }: Props
                 {successLine(paid.outcome)}
               </AppText>
               <Pressable style={[styles.button, styles.fullWidth]} onPress={() => onComplete(paid.offer)}>
-                <AppText weight="bold" size={13} color={colors.white}>See my new rank</AppText>
+                <AppText weight="bold" size={13} color={colors.white}>{completeLabel}</AppText>
               </Pressable>
             </View>
           ) : null}
