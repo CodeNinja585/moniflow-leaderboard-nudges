@@ -1,13 +1,14 @@
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Medal } from 'lucide-react-native';
+import { CircleAlert, Medal } from 'lucide-react-native';
 import { AppText } from './AppText';
 import { colors, radii, shadows, sizes, spacing } from '../theme/tokens';
 import { formatNaira, ordinalSuffix } from '../lib/format';
-import { getPrizeForRank } from '../lib/prizes';
+import { MIN_ELIGIBLE_CASHBACK, getPrizeForRank } from '../lib/prizes';
 import type { LeaderboardEntry } from '../types/leaderboard';
 
-export type RowVariant = 'standard' | 'current' | 'off';
+/** below = under the ₦10 minimum (red, like the live app). */
+export type RowVariant = 'standard' | 'current' | 'off' | 'below';
 
 interface Props {
   entry: LeaderboardEntry;
@@ -30,11 +31,18 @@ const VARIANTS = {
     chipBg: colors.offChipBg, chipValue: colors.offChipValue, ring: colors.offRing,
     plateWidth: 50, overlap: 0, shadow: shadows.card,
   },
+  below: {
+    plate: colors.belowPlate, pill: colors.white, avatar: colors.belowPlate,
+    chipBg: colors.offChipBg, chipValue: colors.offChipValue, ring: colors.belowRing,
+    plateWidth: 50, overlap: 0, shadow: shadows.card,
+  },
 } as const;
 
 function RankRowBase({ entry, variant }: Props) {
   const v = VARIANTS[variant];
-  const subline = variant === 'off'
+  const subline = variant === 'below'
+    ? `Below the ${formatNaira(MIN_ELIGIBLE_CASHBACK, { decimals: false })} minimum`
+    : variant === 'off'
     ? 'Not on the board yet'
     : `Prize ${formatNaira(getPrizeForRank(entry.rank), { decimals: false })}`;
 
@@ -48,15 +56,21 @@ function RankRowBase({ entry, variant }: Props) {
       ]}
     >
       <View style={[styles.plate, { width: v.plateWidth, paddingRight: v.overlap }]}>
-        <View style={styles.rankRow}>
-          <AppText weight="extraBold" size={17} color={colors.white} style={styles.rankNum}>
-            {entry.rank}
-          </AppText>
-          <AppText weight="extraBold" size={7.5} color={colors.white} style={styles.suffix}>
-            {ordinalSuffix(entry.rank)}
-          </AppText>
-        </View>
-        <Medal size={12} color={colors.white} />
+        {variant === 'below' ? (
+          <CircleAlert size={20} color={colors.white} />
+        ) : (
+          <>
+            <View style={styles.rankRow}>
+              <AppText weight="extraBold" size={17} color={colors.white} style={styles.rankNum}>
+                {entry.rank}
+              </AppText>
+              <AppText weight="extraBold" size={7.5} color={colors.white} style={styles.suffix}>
+                {ordinalSuffix(entry.rank)}
+              </AppText>
+            </View>
+            <Medal size={12} color={colors.white} />
+          </>
+        )}
       </View>
 
       <View style={[styles.pill, { backgroundColor: v.pill, marginLeft: -v.overlap }]}>

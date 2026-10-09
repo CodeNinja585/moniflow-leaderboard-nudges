@@ -20,9 +20,11 @@ import { colors, sizes, spacing } from '../theme/tokens';
 import { getPrizeForRank, isTierBoundary } from '../lib/prizes';
 import { applyPurchase, computeNudge, rankBoard } from '../lib/nudgeEngine';
 import { scenarios, ScenarioKey } from '../data/mockLeaderboard';
+import { recommendations } from '../data/mockRecommendations';
+import { MIN_ELIGIBLE_CASHBACK } from '../lib/prizes';
 import type { LeaderboardEntry, Nudge, Track, TrackSummary } from '../types/leaderboard';
 
-const SCENARIO_ORDER: ScenarioKey[] = ['rankUp', 'hold', 'breakIn'];
+const SCENARIO_ORDER: ScenarioKey[] = ['rankUp', 'hold', 'breakIn', 'underMin', 'empty'];
 const ROWS_ABOVE_USER = 3;
 
 export function LeaderboardScreen() {
@@ -37,7 +39,8 @@ export function LeaderboardScreen() {
   );
   const [user, setUser] = useState<LeaderboardEntry>(scenario.currentUser);
   const ranked = useMemo(() => rankBoard(others, user), [others, user]);
-  const nudge = useMemo(() => computeNudge(ranked), [ranked]);
+  const recs = recommendations[scenarioKey];
+  const nudge = useMemo(() => computeNudge(ranked, recs), [ranked, recs]);
   const { board, onBoard } = ranked;
   const currentUser = ranked.user;
 
@@ -76,13 +79,12 @@ export function LeaderboardScreen() {
   // Tapping Buy or Hold opens the purchase sheet with a preview of the outcome.
   const onNudgePress = useCallback(
     (n: Nudge) => {
-      const spend = n.suggestedSpend ?? 0;
-      if (!spend) return;
-      const { before, after, cashback } = applyPurchase(others, user, spend);
+      const { before, after, cashback } = applyPurchase(others, user, n.offer);
       setPurchase({
         nudge: n,
-        spend,
+        spend: n.offer.spend,
         cashback,
+        amountAfter: after.user.amount,
         rankBefore: before.user.rank,
         rankAfter: after.user.rank,
         onBoardBefore: before.onBoard,
@@ -214,7 +216,15 @@ export function LeaderboardScreen() {
           <DockedUserRow
             user={currentUser}
             nudge={nudge}
-            onBoard={onBoard}
+            variant={
+              onBoard
+                ? 'current'
+                : currentUser.amount === 0
+                  ? 'empty'
+                  : currentUser.amount < MIN_ELIGIBLE_CASHBACK
+                    ? 'below'
+                    : 'off'
+            }
             onNudgePress={onNudgePress}
           />
         </Animated.View>

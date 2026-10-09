@@ -1,6 +1,6 @@
 export type Track = 'cashback' | 'referrals' | 'volume';
 
-export type NudgeState = 'rank_up' | 'break_in' | 'hold';
+export type NudgeState = 'rank_up' | 'break_in' | 'hold' | 'qualify';
 
 /**
  * Nudge shown under the current user's row.
@@ -17,9 +17,27 @@ export interface Nudge {
   targetRank: number;
   targetPrize: number;
   ctaLabel: string;
-  /** Suggested purchase that closes the gap (demo engine; proposed to the data team). */
-  suggestedSpend?: number;
-  product?: string;
+  /** The transaction that closes the gap, built from the user's usual transactions. */
+  offer: Offer;
+}
+
+/** A ready-to-pay transaction: the user's usual service, sized to close their gap. */
+export interface Offer {
+  type: 'airtime' | 'data' | 'cable' | 'electricity' | 'bank_transfer';
+  provider: string;
+  target: string;
+  targetName?: string;
+  /** Which of the user's top 3 this came from (1 = their usual). */
+  recRank: 1 | 2 | 3;
+  /** e.g. "MTN airtime", "Ikeja Electric", "DStv Padi". */
+  label: string;
+  planName?: string;
+  validity?: string;
+  /** Exact price for fixed plans; rounded suggestion for free amounts. */
+  spend: number;
+  isFixedPrice: boolean;
+  serviceCharge: number;
+  cashback: number;
 }
 
 export interface LeaderboardEntry {

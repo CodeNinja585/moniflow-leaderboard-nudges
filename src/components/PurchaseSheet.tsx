@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check, Phone, ShieldCheck, Wifi } from 'lucide-react-native';
+import { Check, Phone, ShieldCheck, Tv, Wifi, Zap } from 'lucide-react-native';
 import { AppText } from './AppText';
 import { colors, radii } from '../theme/tokens';
 import { formatNaira } from '../lib/format';
-import { getPrizeForRank } from '../lib/prizes';
+import { MIN_ELIGIBLE_CASHBACK, getPrizeForRank } from '../lib/prizes';
 import { ordinal } from '../lib/nudgeEngine';
 import type { Nudge } from '../types/leaderboard';
 
@@ -13,6 +13,8 @@ export interface PurchasePreview {
   nudge: Nudge;
   spend: number;
   cashback: number;
+  /** User's weekly cashback after the purchase. */
+  amountAfter: number;
   rankBefore: number;
   rankAfter: number;
   onBoardBefore: boolean;
@@ -51,8 +53,11 @@ export function PurchaseSheet({ preview, onCancel, onComplete }: Props) {
 
   const { nudge, spend, cashback, rankBefore, rankAfter, onBoardBefore, onBoardAfter } = preview;
   const isHold = nudge.state === 'hold';
-  const product = nudge.product ?? 'MTN data';
-  const ProductIcon = product.includes('airtime') ? Phone : Wifi;
+  const { offer } = nudge;
+  const product = offer.label;
+  const ProductIcon = { airtime: Phone, data: Wifi, cable: Tv, electricity: Zap, bank_transfer: Phone }[offer.type];
+  const recipient = [offer.target, offer.targetName].filter(Boolean).join(', ');
+  const planLine = offer.planName ? `${offer.planName}, ${offer.validity}` : null;
   const moved = onBoardAfter && (!onBoardBefore || rankAfter < rankBefore);
 
   return (
@@ -77,13 +82,22 @@ export function PurchaseSheet({ preview, onCancel, onComplete }: Props) {
                 </View>
                 <View style={styles.flex}>
                   <AppText weight="bold" size={13} color={colors.navyText}>{product}</AppText>
-                  <AppText size={11} color={colors.mutedText}>Recharge for this number</AppText>
+                  <AppText size={11} color={colors.mutedText} numberOfLines={1}>{recipient}</AppText>
+                  {planLine ? (
+                    <AppText size={11} color={colors.mutedText}>{planLine}</AppText>
+                  ) : null}
+                  {offer.recRank === 1 ? (
+                    <AppText weight="semiBold" size={10.5} color={colors.teal} style={styles.usual}>Your usual</AppText>
+                  ) : null}
                 </View>
                 <AppText weight="extraBold" size={15} color={colors.navyText}>
                   {formatNaira(spend)}
                 </AppText>
               </View>
 
+              {offer.serviceCharge ? (
+                <SummaryRow label="Service charge" value={formatNaira(offer.serviceCharge)} />
+              ) : null}
               <SummaryRow label="Cashback you earn" value={`+${formatNaira(cashback)}`} highlight />
               <SummaryRow
                 label="Your rank"
@@ -135,7 +149,11 @@ export function PurchaseSheet({ preview, onCancel, onComplete }: Props) {
               <AppText size={13} color={colors.tabInactiveText} style={[styles.gapTopSmall, styles.centerText]}>
                 {moved
                   ? `You moved from ${rankText(rankBefore, onBoardBefore)} to ${ordinal(rankAfter)}. Prize: ${prizeText(rankAfter, true)}.`
-                  : `You are still ${rankText(rankAfter, onBoardAfter)}, with a bigger lead.`}
+                  : onBoardAfter
+                    ? `You are still ${ordinal(rankAfter)}, with a bigger lead.`
+                    : preview.amountAfter >= MIN_ELIGIBLE_CASHBACK
+                      ? `You now qualify with ${formatNaira(preview.amountAfter)}. Keep going to make the Top 20.`
+                      : `You now have ${formatNaira(preview.amountAfter)} cashback this week.`}
               </AppText>
               <Pressable
                 style={[styles.button, styles.primary, styles.fullWidth]}
@@ -181,6 +199,7 @@ const styles = StyleSheet.create({
   },
   lead: { marginTop: 6, lineHeight: 17 },
   flex: { flex: 1 },
+  usual: { marginTop: 2 },
   productCard: {
     flexDirection: 'row',
     alignItems: 'center',

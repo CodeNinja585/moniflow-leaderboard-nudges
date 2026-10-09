@@ -11,14 +11,14 @@ const HINT_MS = 2500;
 
 interface Props {
   nudge: Nudge;
-  /** Docked off-board rows use a grey border instead of teal. */
+  /** Rows for users off the board use a grey border instead of teal. */
   docked?: boolean;
   onPress?: (nudge: Nudge) => void;
 }
 
 export function NudgeStrip({ nudge, docked = false, onPress }: Props) {
   const isHold = nudge.state === 'hold';
-  const borderColor = isHold ? colors.amber : nudge.state === 'break_in' && docked ? colors.offRing : colors.teal;
+  const borderColor = isHold ? colors.amber : docked ? colors.offRing : colors.teal;
   const Icon = isHold ? ArrowDown : ArrowUp;
   const [showHint, setShowHint] = useState(false);
 

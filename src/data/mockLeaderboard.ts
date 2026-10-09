@@ -1,17 +1,18 @@
 import type { LeaderboardEntry, Nudge, TrackSummary } from '../types/leaderboard';
 
-export type ScenarioKey = 'rankUp' | 'breakIn' | 'hold';
+export type ScenarioKey = 'rankUp' | 'breakIn' | 'hold' | 'underMin' | 'empty';
 
 export interface Scenario {
   weekNumber: number;
   endsIn: string;
   entries: LeaderboardEntry[];
   currentUser: LeaderboardEntry;
-  nudge: Nudge;
+  /** Original Figma copy; the screen now computes nudges live with the engine. */
+  nudge?: Nudge;
   summaries: TrackSummary[];
 }
 
-export const scenarios: Record<ScenarioKey, Scenario> = {
+export const scenarios = {
   rankUp: {
     weekNumber: 41,
     endsIn: '2d 6h',
@@ -121,7 +122,7 @@ export const scenarios: Record<ScenarioKey, Scenario> = {
       { rank: 19, name: 'Sade Okon', initials: 'SO', amount: 24.20, isCurrentUser: false },
       { rank: 20, name: 'Zainab Musa', initials: 'ZM', amount: 23.70, isCurrentUser: false },
     ],
-    currentUser: { rank: 34, name: 'Masud Hashim', initials: 'MH', amount: 4.20, isCurrentUser: true },
+    currentUser: { rank: 34, name: 'Masud Hashim', initials: 'MH', amount: 14.20, isCurrentUser: true },
     nudge: {
       state: 'break_in',
       message: 'Spend about ₦1,000 on MTN airtime to earn ₦19.60 more cashback and break into the Top 20, where the prize is ₦400.',
@@ -138,4 +139,30 @@ export const scenarios: Record<ScenarioKey, Scenario> = {
       { track: 'volume', userRank: 27 },
     ],
   },
+} as Record<ScenarioKey, Scenario>;
+
+// Users off the board for a different reason: under the ₦10 minimum, or no transactions this week.
+// They share the break-in board; the live app shows Masud's row in red at ₦1.50.
+scenarios.underMin = {
+  weekNumber: 41,
+  endsIn: '2d 6h',
+  entries: scenarios.breakIn.entries,
+  currentUser: { rank: 0, name: 'Masud Hashim', initials: 'MH', amount: 1.5, isCurrentUser: true },
+  summaries: [
+    { track: 'cashback', userRank: null },
+    { track: 'referrals', userRank: null },
+    { track: 'volume', userRank: 31 },
+  ],
+};
+
+scenarios.empty = {
+  weekNumber: 41,
+  endsIn: '2d 6h',
+  entries: scenarios.breakIn.entries,
+  currentUser: { rank: 0, name: 'Masud Hashim', initials: 'MH', amount: 0, isCurrentUser: true },
+  summaries: [
+    { track: 'cashback', userRank: null },
+    { track: 'referrals', userRank: null },
+    { track: 'volume', userRank: null },
+  ],
 };

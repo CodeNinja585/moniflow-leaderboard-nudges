@@ -30,6 +30,8 @@ export const colors = {
   offPill: '#FAFBFD',
   offChipBg: '#F0F2F6',
   offChipValue: '#5D6780',
+  belowPlate: '#E15B5B',
+  belowRing: '#F3B9B9',
 } as const;
 
 export const fonts = {

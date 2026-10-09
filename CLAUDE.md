@@ -28,13 +28,19 @@ In scope:
   - `rank_up`: user is in the Top 20; nudge hangs off their highlighted row and shows the gap to the next prize tier.
   - `break_in`: user is outside the Top 20 or scrolled away; their row docks to the bottom of the screen with the nudge.
   - `hold`: amber strip when someone close behind could push the user down a prize tier.
+  - `qualify`: user is under the ₦10 minimum; red row (like the live app) with "₦X more to qualify". With no transactions at all, the dock shows the empty week card instead.
+- Nudges are computed live by `src/lib/nudgeEngine.ts` from the user's usual transactions (`src/data/mockRecommendations.ts`, top 3 by frequency) and the mock catalogue (`src/data/productCatalog.ts`). Scale the usual (#1) up; fall back to #2 or #3 only when #1 earns no cashback. Fixed-price products (data bundles, cable packages) use the cheapest plan that covers the gap.
+- The demo user is Masud Hashim everywhere.
 - Prize under each name in muted text, and tier divider lines (e.g. "₦650 above").
 
-Out of scope: the home screen "Suggested for you" recommendation block, Variant A, any real API calls, auth, iOS.
+Coming next (not built yet): the home screen with "Suggested for you", a simplified Rewards screen, and a payment sheet that mirrors the live Confirm Purchase screen (shuffled PIN pad).
+
+Out of scope: Variant A, any real API calls, auth, iOS, betting, deposits, wallet top-ups and vouchers as suggestions.
 
 ## Business rules (from the live app, these win over the slides)
 - Only the Top 20 appear on the board.
 - Minimum cashback to qualify: ₦10.00.
+- Electricity: minimum purchase ₦1,000, ₦50 service charge, meter verified before amount entry.
 - Prize tiers:
   - 1st: ₦2,500
   - 2nd: ₦2,000
@@ -51,7 +57,7 @@ Suggested shape (adjust names only if there is a good reason, and say why):
 
 ```ts
 type Track = "cashback" | "referrals" | "volume";
-type NudgeState = "rank_up" | "break_in" | "hold";
+type NudgeState = "rank_up" | "break_in" | "hold" | "qualify";
 
 interface Nudge {
   state: NudgeState;
@@ -62,6 +68,7 @@ interface Nudge {
   targetRank: number;
   targetPrize: number;
   ctaLabel: string;         // "Buy", "Hold", "Invite"
+  offer: Offer;             // the ready-to-pay transaction (see src/types/leaderboard.ts)
 }
 ```
 

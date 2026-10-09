@@ -1,15 +1,22 @@
 // Demo stand-in for the data team's nudge engine. Pure TypeScript, no React imports.
-// Assumptions (from the Figma notes): about 2% cashback on airtime and data,
-// and a small buffer on every gap so the suggested spend safely clears it.
+// The nudge is built from the user's usual transactions (the recommendation engine's top 3):
+// it scales their #1 up to close the gap, and only falls back to #2 or #3 when #1 earns no cashback.
 
-import type { LeaderboardEntry, Nudge } from '../types/leaderboard';
-import { BOARD_SIZE, getNextTierTargetRank, getPrizeForRank } from './prizes';
+import type { LeaderboardEntry, Nudge, Offer } from '../types/leaderboard';
+import type { ServiceRecommendation } from '../data/mockRecommendations';
+import {
+  CASHBACK_RATES,
+  FREE_AMOUNT_RULES,
+  SERVICE_CHARGES,
+  plansFor,
+} from '../data/productCatalog';
+import { BOARD_SIZE, MIN_ELIGIBLE_CASHBACK, getNextTierTargetRank, getPrizeForRank } from './prizes';
 import { formatNaira } from './format';
 
-export const CASHBACK_RATE = 0.02;
 export const GAP_BUFFER = 0.1;
 /** If the person below is closer than this, warn the user to hold their spot. */
 export const HOLD_THRESHOLD = 3;
+/** Smallest suggestion worth making, so the cashback is noticeable. */
 export const MIN_SPEND = 250;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -23,18 +30,75 @@ export function ordinal(n: number): string {
   return `${n}${s}`;
 }
 
-/** Spend needed to earn `cashback`, rounded up to the nearest ₦50, never below MIN_SPEND. */
-export function spendFor(cashback: number): number {
-  const raw = round2(cashback / CASHBACK_RATE);
-  return Math.max(MIN_SPEND, Math.ceil(raw / 50) * 50);
+const TYPE_WORD = { airtime: 'airtime', data: 'data', cable: '', electricity: '', bank_transfer: 'transfer' };
+
+/**
+ * Builds the transaction that earns at least `cashbackNeeded`, from the user's top 3.
+ * Rule: scale up their usual (#1). Fall back to #2 or #3 only when #1 earns no cashback.
+ */
+export function chooseOffer(recs: ServiceRecommendation[], cashbackNeeded: number): Offer | null {
+  for (const rec of recs) {
+    const rate = CASHBACK_RATES[rec.type];
+    if (!rate) continue; // e.g. bank transfers: no amount would ever move them up
+
+    const needed = Math.max(MIN_SPEND, Math.ceil(round2(cashbackNeeded / rate)));
+    const plans = plansFor(rec.type, rec.provider);
+    let spend: number;
+    let planName: string | undefined;
+    let validity: string | undefined;
+
+    if (plans) {
+      const plan = plans.find((p) => p.price >= needed) ?? plans[plans.length - 1];
+      spend = plan.price;
+      planName = plan.name;
+      validity = plan.validity;
+    } else {
+      const rule = FREE_AMOUNT_RULES[rec.type] ?? { min: 50, step: 50 };
+      spend = Math.max(rule.min, Math.ceil(needed / rule.step) * rule.step);
+    }
+
+    const word = TYPE_WORD[rec.type];
+    const label =
+      rec.type === 'cable' && planName
+        ? `${rec.provider} ${planName}`
+        : rec.type === 'data' && planName
+          ? `${rec.provider} ${planName}`
+          : word
+            ? `${rec.provider} ${word}`
+            : rec.provider;
+
+    return {
+      type: rec.type,
+      provider: rec.provider,
+      target: rec.target,
+      targetName: rec.targetName,
+      recRank: rec.rank,
+      label,
+      planName,
+      validity,
+      spend,
+      isFixedPrice: !!plans,
+      serviceCharge: SERVICE_CHARGES[rec.type] ?? 0,
+      cashback: round2(spend * rate),
+    };
+  }
+  return null;
 }
 
-export function cashbackFor(spend: number): number {
-  return round2(spend * CASHBACK_RATE);
+/** Short "how" line for the nudge strip. */
+export function offerSubline(o: Offer): string {
+  if (o.type === 'cable') return `${o.label} renewal, ${nairaWhole(o.spend)}`;
+  if (o.type === 'data') return `${o.label} plan, ${nairaWhole(o.spend)}`;
+  if (o.type === 'electricity') return `${nairaWhole(o.spend)} ${o.provider} token`;
+  return `About ${nairaWhole(o.spend)} in ${o.label}`;
 }
 
-export function productFor(spend: number): string {
-  return spend <= 500 ? 'MTN data' : 'MTN airtime';
+/** Phrase used inside the full message sentence. */
+function offerPhrase(o: Offer): string {
+  if (o.type === 'cable') return `${nairaWhole(o.spend)} on a ${o.label} renewal`;
+  if (o.type === 'data') return `${nairaWhole(o.spend)} on the ${o.label} plan`;
+  if (o.type === 'electricity') return `${nairaWhole(o.spend)} on ${o.provider}`;
+  return `about ${nairaWhole(o.spend)} on ${o.label}`;
 }
 
 export interface RankedBoard {
@@ -48,78 +112,94 @@ export interface RankedBoard {
 }
 
 /**
- * Places the user among everyone else. Ties go against the user: they must have
- * strictly more cashback to pass someone. Off-board users keep their known rank.
+ * Places the user among everyone else. Ties go against the user. Users under the
+ * ₦10 minimum never appear on the board. Off-board users keep their known rank.
  */
 export function rankBoard(others: LeaderboardEntry[], user: LeaderboardEntry): RankedBoard {
   const sorted = [...others].sort((a, b) => b.amount - a.amount);
+  const eligible = user.amount >= MIN_ELIGIBLE_CASHBACK;
   const firstBelow = sorted.findIndex((o) => user.amount > o.amount);
   const pos = firstBelow === -1 ? sorted.length : firstBelow;
 
-  if (pos < BOARD_SIZE) {
+  if (eligible && pos < BOARD_SIZE) {
     const ordered = [...sorted.slice(0, pos), user, ...sorted.slice(pos)].map((e, i) => ({
       ...e,
       rank: i + 1,
     }));
-    return {
-      board: ordered.slice(0, BOARD_SIZE),
-      user: ordered[pos],
-      onBoard: true,
-      ordered,
-    };
+    return { board: ordered.slice(0, BOARD_SIZE), user: ordered[pos], onBoard: true, ordered };
   }
 
   const ordered = sorted.map((e, i) => ({ ...e, rank: i + 1 }));
   return {
     board: ordered.slice(0, BOARD_SIZE),
-    user: { ...user, rank: Math.max(user.rank, BOARD_SIZE + 1) },
+    user: { ...user, rank: eligible ? Math.max(user.rank, BOARD_SIZE + 1) : 0 },
     onBoard: false,
     ordered,
   };
 }
 
 /** Works out the single most useful nudge for the user, or null if there is nothing to chase. */
-export function computeNudge({ ordered, user, onBoard }: RankedBoard): Nudge | null {
+export function computeNudge(
+  { ordered, user, onBoard }: RankedBoard,
+  recs: ServiceRecommendation[],
+): Nudge | null {
+  // 1. Under the ₦10 minimum (including users with no transactions yet): qualify first.
+  if (user.amount < MIN_ELIGIBLE_CASHBACK) {
+    const gap = round2(MIN_ELIGIBLE_CASHBACK - user.amount + GAP_BUFFER);
+    const offer = chooseOffer(recs, gap);
+    if (!offer) return null;
+    return {
+      state: 'qualify',
+      headline: `${naira(gap)} more to qualify`,
+      subline: offerSubline(offer),
+      message: `Spend ${offerPhrase(offer)} to earn ${naira(offer.cashback)} cashback and pass the ${nairaWhole(MIN_ELIGIBLE_CASHBACK)} minimum for this week's prizes.`,
+      gapAmount: gap,
+      targetRank: BOARD_SIZE,
+      targetPrize: getPrizeForRank(BOARD_SIZE),
+      ctaLabel: 'Buy',
+      offer,
+    };
+  }
+
+  // 2. On the board with someone close behind and a prize drop at stake: hold.
   if (onBoard) {
-    const below = ordered[user.rank]; // index rank = the person directly below
+    const below = ordered[user.rank]; // the person directly below
     const myPrize = getPrizeForRank(user.rank);
     if (below) {
       const lead = round2(user.amount - below.amount);
       const prizeBelow = getPrizeForRank(user.rank + 1);
       if (lead < HOLD_THRESHOLD && prizeBelow < myPrize) {
-        const spend = spendFor(HOLD_THRESHOLD - lead + GAP_BUFFER);
-        const product = productFor(spend);
-        const subline =
-          prizeBelow > 0
-            ? `Slip one place and your prize drops to ${nairaWhole(prizeBelow)}`
-            : 'Slip one place and you drop off the board';
-        return {
-          state: 'hold',
-          headline: `Only ${naira(lead)} ahead of ${ordinal(user.rank + 1)}`,
-          subline,
-          message: `You are only ${naira(lead)} ahead of ${ordinal(user.rank + 1)} place. Spend about ${nairaWhole(spend)} on ${product} to protect your ${nairaWhole(myPrize)} prize.`,
-          gapAmount: lead,
-          targetRank: user.rank,
-          targetPrize: myPrize,
-          ctaLabel: 'Hold',
-          suggestedSpend: spend,
-          product,
-        };
+        const offer = chooseOffer(recs, HOLD_THRESHOLD - lead + GAP_BUFFER);
+        if (offer) {
+          return {
+            state: 'hold',
+            headline: `Only ${naira(lead)} ahead of ${ordinal(user.rank + 1)}`,
+            subline:
+              prizeBelow > 0
+                ? `Slip one place and your prize drops to ${nairaWhole(prizeBelow)}`
+                : 'Slip one place and you drop off the board',
+            message: `You are only ${naira(lead)} ahead of ${ordinal(user.rank + 1)} place. Spend ${offerPhrase(offer)} to protect your ${nairaWhole(myPrize)} prize.`,
+            gapAmount: lead,
+            targetRank: user.rank,
+            targetPrize: myPrize,
+            ctaLabel: 'Hold',
+            offer,
+          };
+        }
       }
     }
   }
 
-  const targetRank = getNextTierTargetRank(user.rank);
+  // 3. Chase the next prize tier, or break into the Top 20.
+  const targetRank = getNextTierTargetRank(onBoard ? user.rank : BOARD_SIZE + 1);
   if (targetRank === null) return null;
-
-  // Person currently holding the target rank (never the user, who sits below it).
   const target = onBoard ? ordered[targetRank - 1] : ordered[BOARD_SIZE - 1];
-  if (!target) return null;
-
-  const gap = round2(target.amount - user.amount + GAP_BUFFER);
+  // Board not full yet: the ₦10 minimum is the only bar to clear.
+  const targetAmount = target ? target.amount : MIN_ELIGIBLE_CASHBACK;
+  const gap = round2(Math.max(targetAmount - user.amount, 0) + GAP_BUFFER);
   const prize = getPrizeForRank(targetRank);
-  const spend = spendFor(gap);
-  const product = productFor(spend);
+  const offer = chooseOffer(recs, gap);
+  if (!offer) return null;
   const offBoard = !onBoard;
 
   return {
@@ -127,16 +207,15 @@ export function computeNudge({ ordered, user, onBoard }: RankedBoard): Nudge | n
     headline: offBoard
       ? `${naira(gap)} to make the Top 20`
       : `${naira(gap)} to ${ordinal(targetRank)}, win ${nairaWhole(prize)}`,
-    subline: `About ${nairaWhole(spend)} in ${product}`,
+    subline: offerSubline(offer),
     message: offBoard
-      ? `Spend about ${nairaWhole(spend)} on ${product} to earn ${naira(gap)} more cashback and break into the Top 20, where the prize is ${nairaWhole(prize)}.`
-      : `Spend about ${nairaWhole(spend)} on ${product} to earn ${naira(gap)} more cashback and move up to ${ordinal(targetRank)} place, where the prize is ${nairaWhole(prize)}.`,
+      ? `Spend ${offerPhrase(offer)} to earn ${naira(offer.cashback)} cashback and break into the Top 20, where the prize is ${nairaWhole(prize)}.`
+      : `Spend ${offerPhrase(offer)} to earn ${naira(offer.cashback)} cashback and move up to ${ordinal(targetRank)} place, where the prize is ${nairaWhole(prize)}.`,
     gapAmount: gap,
     targetRank,
     targetPrize: prize,
     ctaLabel: 'Buy',
-    suggestedSpend: spend,
-    product,
+    offer,
   };
 }
 
@@ -144,10 +223,9 @@ export function computeNudge({ ordered, user, onBoard }: RankedBoard): Nudge | n
 export function applyPurchase(
   others: LeaderboardEntry[],
   user: LeaderboardEntry,
-  spend: number,
+  offer: Offer,
 ): { before: RankedBoard; after: RankedBoard; cashback: number } {
   const before = rankBoard(others, user);
-  const cashback = cashbackFor(spend);
-  const after = rankBoard(others, { ...user, amount: round2(user.amount + cashback) });
-  return { before, after, cashback };
+  const after = rankBoard(others, { ...user, amount: round2(user.amount + offer.cashback) });
+  return { before, after, cashback: offer.cashback };
 }

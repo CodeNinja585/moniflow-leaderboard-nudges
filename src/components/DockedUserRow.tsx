@@ -1,20 +1,23 @@
 import { StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RankRow } from './RankRow';
+import { RankRow, RowVariant } from './RankRow';
 import { NudgeStrip } from './NudgeStrip';
+import { EmptyWeekCard } from './EmptyWeekCard';
 import { colors, shadows, spacing } from '../theme/tokens';
 import type { LeaderboardEntry, Nudge } from '../types/leaderboard';
 
 interface Props {
   user: LeaderboardEntry;
   nudge: Nudge;
-  onBoard: boolean;
+  /** current = on the board but scrolled away; off = eligible but outside the Top 20;
+   *  below = under the ₦10 minimum; empty = no transactions this week. */
+  variant: RowVariant | 'empty';
   onNudgePress?: (nudge: Nudge) => void;
 }
 
-/** B2: the user's row pinned to the bottom when they are off the board or scrolled away. */
-export function DockedUserRow({ user, nudge, onBoard, onNudgePress }: Props) {
+/** Sticky row: the user's own row (or empty card) pinned to the bottom of the screen. */
+export function DockedUserRow({ user, nudge, variant, onNudgePress }: Props) {
   const insets = useSafeAreaInsets();
   return (
     <LinearGradient
@@ -23,8 +26,14 @@ export function DockedUserRow({ user, nudge, onBoard, onNudgePress }: Props) {
       locations={[0, 0.26, 1]}
       style={[styles.dock, { paddingBottom: spacing.dockY + insets.bottom }]}
     >
-      <RankRow entry={user} variant={onBoard ? 'current' : 'off'} />
-      <NudgeStrip nudge={nudge} docked={!onBoard} onPress={onNudgePress} />
+      {variant === 'empty' ? (
+        <EmptyWeekCard nudge={nudge} onStart={onNudgePress} />
+      ) : (
+        <>
+          <RankRow entry={user} variant={variant} />
+          <NudgeStrip nudge={nudge} docked={variant !== 'current'} onPress={onNudgePress} />
+        </>
+      )}
     </LinearGradient>
   );
 }
