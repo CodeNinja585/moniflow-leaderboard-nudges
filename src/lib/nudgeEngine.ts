@@ -32,55 +32,67 @@ export function ordinal(n: number): string {
 
 const TYPE_WORD = { airtime: 'airtime', data: 'data', cable: '', electricity: '', bank_transfer: 'transfer' };
 
+/** What the user is paying for: one of their top 3, or a service they picked themselves. */
+export interface PaySource {
+  type: ServiceRecommendation['type'];
+  provider: string;
+  target: string;
+  targetName?: string;
+  rank: 1 | 2 | 3 | null;
+}
+
+export function cashbackRate(type: PaySource['type']): number {
+  return CASHBACK_RATES[type];
+}
+
+function labelFor(src: PaySource, planName?: string): string {
+  if ((src.type === 'cable' || src.type === 'data') && planName) return `${src.provider} ${planName}`;
+  const word = TYPE_WORD[src.type];
+  return word ? `${src.provider} ${word}` : src.provider;
+}
+
+/** An offer at an exact amount (or plan price), e.g. after the user edits the amount. */
+export function offerAt(src: PaySource, spend: number, planName?: string): Offer {
+  const plans = plansFor(src.type, src.provider);
+  const plan = plans?.find((p) => p.name === planName);
+  return {
+    type: src.type,
+    provider: src.provider,
+    target: src.target,
+    targetName: src.targetName,
+    recRank: src.rank,
+    label: labelFor(src, plan?.name),
+    planName: plan?.name,
+    validity: plan?.validity,
+    spend: plan ? plan.price : spend,
+    isFixedPrice: !!plans,
+    serviceCharge: SERVICE_CHARGES[src.type] ?? 0,
+    cashback: round2((plan ? plan.price : spend) * CASHBACK_RATES[src.type]),
+  };
+}
+
+/** Sizes one service so it earns at least `cashbackNeeded`. Null if it earns no cashback. */
+export function sizeOffer(src: PaySource, cashbackNeeded: number): Offer | null {
+  const rate = CASHBACK_RATES[src.type];
+  if (!rate) return null; // e.g. bank transfers: no amount would ever move them up
+  const needed = Math.max(MIN_SPEND, Math.ceil(round2(cashbackNeeded / rate)));
+  const plans = plansFor(src.type, src.provider);
+  if (plans) {
+    const plan = plans.find((p) => p.price >= needed) ?? plans[plans.length - 1];
+    return offerAt(src, plan.price, plan.name);
+  }
+  const rule = FREE_AMOUNT_RULES[src.type] ?? { min: 50, step: 50 };
+  return offerAt(src, Math.max(rule.min, Math.ceil(needed / rule.step) * rule.step));
+}
+
 /**
  * Builds the transaction that earns at least `cashbackNeeded`, from the user's top 3.
  * Rule: scale up their usual (#1). Fall back to #2 or #3 only when #1 earns no cashback.
  */
 export function chooseOffer(recs: ServiceRecommendation[], cashbackNeeded: number): Offer | null {
   for (const rec of recs) {
-    const rate = CASHBACK_RATES[rec.type];
-    if (!rate) continue; // e.g. bank transfers: no amount would ever move them up
-
-    const needed = Math.max(MIN_SPEND, Math.ceil(round2(cashbackNeeded / rate)));
-    const plans = plansFor(rec.type, rec.provider);
-    let spend: number;
-    let planName: string | undefined;
-    let validity: string | undefined;
-
-    if (plans) {
-      const plan = plans.find((p) => p.price >= needed) ?? plans[plans.length - 1];
-      spend = plan.price;
-      planName = plan.name;
-      validity = plan.validity;
-    } else {
-      const rule = FREE_AMOUNT_RULES[rec.type] ?? { min: 50, step: 50 };
-      spend = Math.max(rule.min, Math.ceil(needed / rule.step) * rule.step);
-    }
-
-    const word = TYPE_WORD[rec.type];
-    const label =
-      rec.type === 'cable' && planName
-        ? `${rec.provider} ${planName}`
-        : rec.type === 'data' && planName
-          ? `${rec.provider} ${planName}`
-          : word
-            ? `${rec.provider} ${word}`
-            : rec.provider;
-
-    return {
-      type: rec.type,
-      provider: rec.provider,
-      target: rec.target,
-      targetName: rec.targetName,
-      recRank: rec.rank,
-      label,
-      planName,
-      validity,
-      spend,
-      isFixedPrice: !!plans,
-      serviceCharge: SERVICE_CHARGES[rec.type] ?? 0,
-      cashback: round2(spend * rate),
-    };
+    const offer = sizeOffer(rec, cashbackNeeded);
+    if (offer) return offer;
   }
   return null;
 }
@@ -158,6 +170,7 @@ export function computeNudge(
       targetPrize: getPrizeForRank(BOARD_SIZE),
       ctaLabel: 'Buy',
       offer,
+      cashbackTarget: gap,
     };
   }
 
@@ -169,7 +182,8 @@ export function computeNudge(
       const lead = round2(user.amount - below.amount);
       const prizeBelow = getPrizeForRank(user.rank + 1);
       if (lead < HOLD_THRESHOLD && prizeBelow < myPrize) {
-        const offer = chooseOffer(recs, HOLD_THRESHOLD - lead + GAP_BUFFER);
+        const needed = round2(HOLD_THRESHOLD - lead + GAP_BUFFER);
+        const offer = chooseOffer(recs, needed);
         if (offer) {
           return {
             state: 'hold',
@@ -184,6 +198,7 @@ export function computeNudge(
             targetPrize: myPrize,
             ctaLabel: 'Hold',
             offer,
+            cashbackTarget: needed,
           };
         }
       }
@@ -216,6 +231,7 @@ export function computeNudge(
     targetPrize: prize,
     ctaLabel: 'Buy',
     offer,
+    cashbackTarget: gap,
   };
 }
 

@@ -33,7 +33,9 @@ In scope:
 - The demo user is Masud Hashim everywhere.
 - Prize under each name in muted text, and tier divider lines (e.g. "₦650 above").
 
-Coming next (not built yet): the home screen with "Suggested for you", a simplified Rewards screen, and a payment sheet that mirrors the live Confirm Purchase screen (shuffled PIN pad).
+- Payment sheet (`PurchaseSheet` + `PinPad`) mirrors the live Confirm Purchase screen: order summary, service charge, Apply Cashback toggle (no effect on the maths), shuffled PIN keypad (any 4 digits accepted in the demo), optional "Use fingerprint" via expo-local-authentication. Users can switch to their #2 or #3, or "Something else", and change the amount or plan; a live preview shows the rank and prize effect before paying.
+
+Coming next (not built yet): the home screen with "Suggested for you" and a simplified Rewards screen.
 
 Out of scope: Variant A, any real API calls, auth, iOS, betting, deposits, wallet top-ups and vouchers as suggestions.
 

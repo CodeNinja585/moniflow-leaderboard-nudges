@@ -19,6 +19,8 @@ export interface Nudge {
   ctaLabel: string;
   /** The transaction that closes the gap, built from the user's usual transactions. */
   offer: Offer;
+  /** Cashback this nudge needs, so an alternative purchase can be sized to the same goal. */
+  cashbackTarget: number;
 }
 
 /** A ready-to-pay transaction: the user's usual service, sized to close their gap. */
@@ -27,8 +29,8 @@ export interface Offer {
   provider: string;
   target: string;
   targetName?: string;
-  /** Which of the user's top 3 this came from (1 = their usual). */
-  recRank: 1 | 2 | 3;
+  /** Which of the user's top 3 this came from (1 = their usual); null for "something else". */
+  recRank: 1 | 2 | 3 | null;
   /** e.g. "MTN airtime", "Ikeja Electric", "DStv Padi". */
   label: string;
   planName?: string;

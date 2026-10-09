@@ -58,3 +58,24 @@ export function plansFor(type: ServiceType, provider: string): Plan[] | null {
   if (type === 'cable') return CABLE_PACKAGES[provider] ?? null;
   return null;
 }
+
+/** Services a user can pick under "Something else", with the providers the live app offers. */
+export const OTHER_SERVICES: { type: ServiceType; title: string; providers: string[] }[] = [
+  { type: 'airtime', title: 'Airtime', providers: ['MTN', 'Airtel', 'Glo', '9mobile'] },
+  { type: 'data', title: 'Data', providers: ['MTN', 'Airtel', 'Glo', '9mobile'] },
+  { type: 'electricity', title: 'Electricity', providers: ['Ikeja Electric', 'AEDC', 'EEDC', 'Kaduna Electric', 'EKEDC'] },
+  { type: 'cable', title: 'Cable TV', providers: ['DStv', 'GOtv'] },
+];
+
+/** Mock saved recipients for services the user has not used before (demo only). */
+export const DEFAULT_TARGETS: Record<'phone' | 'meter' | 'smartcard', { target: string; targetName?: string }> = {
+  phone: { target: '08031234567' },
+  meter: { target: '45012345678', targetName: 'MASUD HASHIM' },
+  smartcard: { target: '7023456789', targetName: 'MASUD HASHIM' },
+};
+
+/** Quick-select amounts for free-amount services, like the live purchase screens. */
+export const QUICK_AMOUNTS: Partial<Record<ServiceType, number[]>> = {
+  airtime: [100, 200, 500, 1000, 2000, 5000],
+  electricity: [1000, 2000, 3000, 5000, 10000, 20000],
+};

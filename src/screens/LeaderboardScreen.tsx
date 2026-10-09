@@ -15,14 +15,14 @@ import { TierDivider } from '../components/TierDivider';
 import { DockedUserRow } from '../components/DockedUserRow';
 import { AppText } from '../components/AppText';
 import { BoardFooter } from '../components/BoardFooter';
-import { PurchasePreview, PurchaseSheet } from '../components/PurchaseSheet';
+import { PurchaseOutcome, PurchaseRequest, PurchaseSheet } from '../components/PurchaseSheet';
 import { colors, sizes, spacing } from '../theme/tokens';
 import { getPrizeForRank, isTierBoundary } from '../lib/prizes';
 import { applyPurchase, computeNudge, rankBoard } from '../lib/nudgeEngine';
 import { scenarios, ScenarioKey } from '../data/mockLeaderboard';
 import { recommendations } from '../data/mockRecommendations';
 import { MIN_ELIGIBLE_CASHBACK } from '../lib/prizes';
-import type { LeaderboardEntry, Nudge, Track, TrackSummary } from '../types/leaderboard';
+import type { LeaderboardEntry, Nudge, Offer, Track, TrackSummary } from '../types/leaderboard';
 
 const SCENARIO_ORDER: ScenarioKey[] = ['rankUp', 'hold', 'breakIn', 'underMin', 'empty'];
 const ROWS_ABOVE_USER = 3;
@@ -53,7 +53,7 @@ export function LeaderboardScreen() {
   );
 
   const [track, setTrack] = useState<Track>('cashback');
-  const [purchase, setPurchase] = useState<PurchasePreview | null>(null);
+  const [purchase, setPurchase] = useState<PurchaseRequest | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
   const autoScrolled = useRef(false);
@@ -76,35 +76,33 @@ export function LeaderboardScreen() {
     setScenarioIndex(next);
   }, [scenarioIndex, scrollY]);
 
-  // Tapping Buy or Hold opens the purchase sheet with a preview of the outcome.
-  const onNudgePress = useCallback(
-    (n: Nudge) => {
-      const { before, after, cashback } = applyPurchase(others, user, n.offer);
-      setPurchase({
-        nudge: n,
-        spend: n.offer.spend,
+  // Tapping Buy or Hold opens the payment sheet. The user can switch to another service there.
+  const onNudgePress = useCallback((n: Nudge) => setPurchase({ nudge: n, recs }), [recs]);
+
+  // Live preview of what any purchase would do to the user's rank, before paying.
+  const simulate = useCallback(
+    (offer: Offer): PurchaseOutcome => {
+      const { before, after, cashback } = applyPurchase(others, user, offer);
+      return {
         cashback,
         amountAfter: after.user.amount,
         rankBefore: before.user.rank,
         rankAfter: after.user.rank,
         onBoardBefore: before.onBoard,
         onBoardAfter: after.onBoard,
-      });
+      };
     },
     [others, user],
   );
 
-  const onPurchaseComplete = useCallback(
-    (p: PurchasePreview) => {
-      setPurchase(null);
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      // Re-scroll to the user's new position once the list re-lays out.
-      autoScrolled.current = false;
-      animateScroll.current = true;
-      setUser((u) => ({ ...u, amount: Math.round((u.amount + p.cashback) * 100) / 100 }));
-    },
-    [],
-  );
+  const onPurchaseComplete = useCallback((offer: Offer) => {
+    setPurchase(null);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // Re-scroll to the user's new position once the list re-lays out.
+    autoScrolled.current = false;
+    animateScroll.current = true;
+    setUser((u) => ({ ...u, amount: Math.round((u.amount + offer.cashback) * 100) / 100 }));
+  }, []);
 
   const onUserLayout = useCallback(
     (e: LayoutChangeEvent) => {
@@ -179,7 +177,10 @@ export function LeaderboardScreen() {
             key={scenarioKey}
             ref={scrollRef}
             style={styles.list}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[
+              styles.listContent,
+              currentUser.amount === 0 && styles.listContentTallDock,
+            ]}
             onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
             onScroll={onScroll}
             onScrollBeginDrag={() => setShowScrolledCaption(false)}
@@ -231,7 +232,8 @@ export function LeaderboardScreen() {
       ) : null}
 
       <PurchaseSheet
-        preview={purchase}
+        request={purchase}
+        simulate={simulate}
         onCancel={() => setPurchase(null)}
         onComplete={onPurchaseComplete}
       />
@@ -249,6 +251,8 @@ const styles = StyleSheet.create({
   dockLayer: { position: 'absolute', left: 0, right: 0, bottom: 0, top: 0 },
   // Room for the docked row so the footer can always scroll clear of it.
   listContent: { paddingBottom: 150 },
+  // The empty week card is taller than a docked row.
+  listContentTallDock: { paddingBottom: 230 },
   rowGap: { marginTop: spacing.rowGap },
   placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   placeholderSub: { marginTop: 4 },

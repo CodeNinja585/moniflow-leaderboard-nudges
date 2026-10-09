@@ -30,6 +30,9 @@ export const colors = {
   offPill: '#FAFBFD',
   offChipBg: '#F0F2F6',
   offChipValue: '#5D6780',
+  pinBlue: '#4392EA',
+  pinPanel: '#F5F6F8',
+  pinKeyBorder: '#E1E5EC',
   belowPlate: '#E15B5B',
   belowRing: '#F3B9B9',
 } as const;
