@@ -22,7 +22,8 @@ import { AppText } from '../components/AppText';
 import { SuggestedForYou } from '../components/SuggestedForYou';
 import { PurchaseRequest, PurchaseSheet } from '../components/PurchaseSheet';
 import { colors } from '../theme/tokens';
-import { ordinal, PaySource, sizeOffer } from '../lib/nudgeEngine';
+import { ordinal, PaySource, positionAfter, sizeOffer } from '../lib/nudgeEngine';
+import { formatNaira } from '../lib/format';
 import { DEFAULT_TARGETS } from '../data/productCatalog';
 import { useDemo } from '../state/DemoContext';
 import type { ServiceRecommendation } from '../data/mockRecommendations';
@@ -94,13 +95,14 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
     if (offer) open(offer);
   };
 
-  const leaderboardLine = nudge
-    ? ranked.onBoard
-      ? `You're ${ordinal(ranked.user.rank)}. ${nudge.headline}`
-      : nudge.headline
-    : ranked.onBoard
-      ? `You're ${ordinal(ranked.user.rank)} on the leaderboard`
-      : null;
+  // One message: where the user would be after their suggested transaction.
+  const leaderboardLine = (() => {
+    if (!nudge) return ranked.onBoard ? `You're ${ordinal(ranked.user.rank)} on the leaderboard` : null;
+    const o = nudge.offer;
+    const amount = formatNaira(o.spend, { decimals: false });
+    const after = positionAfter(simulate(o));
+    return `After ${amount} ${o.label}, ${after}`;
+  })();
 
   return (
     <View style={styles.screen}>

@@ -33,10 +33,10 @@ In scope:
 - The demo user is Masud Hashim everywhere.
 - Prize under each name in muted text, and tier divider lines (e.g. "₦650 above").
 
-- Payment sheet (`PurchaseSheet` + `PinPad`) mirrors the live Confirm Purchase screen: order summary, service charge, Apply Cashback toggle (no effect on the maths), shuffled PIN keypad (any 4 digits accepted in the demo), a small fingerprint icon beside the PIN boxes (expo-local-authentication), a typed amount field with min and daily-limit checks, and a Back arrow (and Android back) that steps back through earlier choices before closing. Users can switch to their #2 or #3, or "Something else", and change the amount or plan; a live preview shows the rank and prize effect before paying.
+- Payment sheet (`PurchaseSheet` + `PinPad`) mirrors the live Confirm Purchase screen: order summary, service charge, Apply Cashback toggle (no effect on the maths), shuffled PIN keypad (any 4 digits accepted in the demo), a small fingerprint icon beside the PIN boxes (expo-local-authentication), a typed amount field with min and daily-limit checks, and a Back arrow (and Android back) that steps back through earlier choices before closing. One recommendation per sheet (data team, 9 Oct): the "Pay for" switcher exists but is off (`allowSwitching`). Users can change the amount or plan; one message shows where they will be after paying (`positionAfter` in nudgeEngine).
 
 - App flow (`App.tsx`): Home (Suggested for you + Switch Menu) and Rewards share a bottom nav; Rewards' Leaderboard button and Home's leaderboard line open the Leaderboard. Android back steps back. Scenario, user and nudge live in `src/state/DemoContext.tsx`, so a purchase on any screen moves Masud on the board.
-- Home "Suggested for you" (Figma option A plus a dismiss X): the user's top 3 from the recommendation engine, the usual one outlined; tapping one, or Electricity/Airtime/Data/Cable in the Switch Menu, opens the same payment sheet sized to the current leaderboard goal.
+- Home "Suggested for you" (Figma option A plus a dismiss X): the user's top 3 from the recommendation engine, the usual one marked with a "Usual" tag (no outline); tapping one, or Electricity/Airtime/Data/Cable in the Switch Menu, opens the same payment sheet sized to the current leaderboard goal. The line under the tiles reads "After ₦250 MTN airtime, you'll be 10th".
 
 Out of scope: Variant A, any real API calls, auth, iOS, betting, deposits, wallet top-ups and vouchers as suggestions.
 

@@ -10,13 +10,13 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check, ChevronLeft, Gift, Phone, ShieldCheck, Tv, Wifi, X, Zap } from 'lucide-react-native';
+import { Check, ChevronLeft, Gift, Phone, ShieldCheck, Trophy, Tv, Wifi, X, Zap } from 'lucide-react-native';
 import { AppText } from './AppText';
 import { PinPad } from './PinPad';
 import { colors, radii } from '../theme/tokens';
 import { formatNaira } from '../lib/format';
 import { MIN_ELIGIBLE_CASHBACK, getPrizeForRank } from '../lib/prizes';
-import { PaySource, cashbackRate, offerAt, ordinal, sizeOffer } from '../lib/nudgeEngine';
+import { PaySource, cashbackRate, offerAt, ordinal, positionAfter, sizeOffer } from '../lib/nudgeEngine';
 import {
   DEFAULT_TARGETS,
   FREE_AMOUNT_RULES,
@@ -52,6 +52,11 @@ interface Props {
   onComplete: (offer: Offer) => void;
   /** Success button label. Leaderboard: "See my new rank"; Home: "Done". */
   completeLabel?: string;
+  /**
+   * Show "Pay for" chips to switch to another recommendation or service.
+   * Off: the data team asked for one recommendation per nudge (9 Oct).
+   */
+  allowSwitching?: boolean;
 }
 
 type Step = 'confirm' | 'processing' | 'success';
@@ -87,7 +92,7 @@ function defaultTarget(type: PaySource['type'], recs: ServiceRecommendation[]) {
   return type === 'electricity' ? DEFAULT_TARGETS.meter : DEFAULT_TARGETS.smartcard;
 }
 
-export function PurchaseSheet({ request, simulate, onCancel, onComplete, completeLabel = 'See my new rank' }: Props) {
+export function PurchaseSheet({ request, simulate, onCancel, onComplete, completeLabel = 'See my new rank', allowSwitching = false }: Props) {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>('confirm');
   const [offer, setOffer] = useState<Offer | null>(null);
@@ -206,6 +211,8 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete, complet
                 </Pressable>
               </View>
 
+              {allowSwitching ? (
+                <>
               {/* What to pay for: usual first, then the user's other two, then anything else. */}
               <AppText weight="semiBold" size={11.5} color={colors.mutedText} style={styles.sectionLabel}>
                 PAY FOR
@@ -266,6 +273,9 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete, complet
                     </View>
                   ))}
                 </View>
+              ) : null}
+
+                </>
               ) : null}
 
               {/* Order summary, as on the live Confirm Purchase screen. */}
@@ -356,25 +366,12 @@ export function PurchaseSheet({ request, simulate, onCancel, onComplete, complet
                     })}
               </ScrollView>
 
-              {/* Live leaderboard preview for whatever is selected. */}
+              {/* Where the user will be after paying: one message, as the data team asked. */}
               <View style={styles.impact}>
-                <ImpactRow label="Cashback you earn" value={`+${formatNaira(outcome.cashback)}`} highlight />
-                <ImpactRow
-                  label="Your rank"
-                  value={
-                    moved
-                      ? `${rankText(outcome.rankBefore, outcome.onBoardBefore)} to ${ordinal(outcome.rankAfter)}`
-                      : outcome.onBoardAfter
-                        ? `Still ${ordinal(outcome.rankAfter)}`
-                        : outcome.amountAfter >= MIN_ELIGIBLE_CASHBACK
-                          ? 'Qualified, not on the board yet'
-                          : 'Not qualified yet'
-                  }
-                />
-                <ImpactRow
-                  label="Your prize"
-                  value={prizeBefore === prizeAfter ? (outcome.onBoardAfter ? `${prizeAfter}, protected` : prizeAfter) : `${prizeBefore} to ${prizeAfter}`}
-                />
+                <Trophy size={16} color="#0B7A6E" />
+                <AppText weight="semiBold" size={13} color="#0B5F56" style={styles.flex}>
+                  After this payment, {positionAfter(outcome)}
+                </AppText>
               </View>
 
               <View style={styles.cashbackRow}>
@@ -567,13 +564,15 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   impact: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 12,
     padding: 12,
     borderRadius: radii.card,
     backgroundColor: colors.tealSoft,
     borderWidth: 1,
     borderColor: '#BFE9E2',
-    gap: 6,
+    gap: 8,
   },
   impactRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cashbackRow: {

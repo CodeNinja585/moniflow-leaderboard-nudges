@@ -245,3 +245,22 @@ export function applyPurchase(
   const after = rankBoard(others, { ...user, amount: round2(user.amount + offer.cashback) });
   return { before, after, cashback: offer.cashback };
 }
+
+export interface PositionChange {
+  rankBefore: number;
+  rankAfter: number;
+  onBoardBefore: boolean;
+  onBoardAfter: boolean;
+  amountAfter: number;
+}
+
+/** The single "where you'll be after this payment" line, e.g. "you'll be 10th". */
+export function positionAfter(c: PositionChange): string {
+  if (c.onBoardAfter) {
+    const moved = !c.onBoardBefore || c.rankAfter < c.rankBefore;
+    return moved ? `you'll be ${ordinal(c.rankAfter)}` : `you'll stay ${ordinal(c.rankAfter)}`;
+  }
+  return c.amountAfter >= MIN_ELIGIBLE_CASHBACK
+    ? "you'll qualify, but not make the Top 20 yet"
+    : `you'll still be under the ${nairaWhole(MIN_ELIGIBLE_CASHBACK)} minimum`;
+}
