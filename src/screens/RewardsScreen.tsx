@@ -32,39 +32,53 @@ export function RewardsScreen({ onOpenLeaderboard }: Props) {
     >
       <AppText weight="bold" size={18} color={colors.navyText} style={styles.title}>REWARDS</AppText>
 
+      {/* Bonus card, laid out like the live app: gift, totals, Leaderboard button in one row. */}
       <LinearGradient colors={[colors.headerBottom, colors.headerTop]} style={styles.bonusCard}>
         <View style={styles.giftCircle}>
-          <Gift size={30} color={colors.amber} />
+          <Gift size={26} color={colors.amber} />
         </View>
         <View style={styles.flex}>
-          <AppText weight="bold" size={15} color={colors.white}>Daily Reward Bonus</AppText>
-          <AppText size={12.5} color={colors.headerSubtitle} style={styles.sub}>Total Bonus</AppText>
-          <AppText weight="bold" size={17} color={colors.white}>{formatNaira(TOTAL_BONUS)}</AppText>
+          <AppText weight="semiBold" size={12.5} color={colors.white} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+            Daily Reward Bonus
+          </AppText>
+          <AppText size={11.5} color={colors.headerSubtitle} style={styles.sub}>Total Bonus</AppText>
+          <AppText weight="bold" size={16} color={colors.white} style={styles.sub}>{formatNaira(TOTAL_BONUS)}</AppText>
         </View>
-        <Pressable onPress={onOpenLeaderboard} style={styles.lbButton} accessibilityRole="button">
-          <AppText weight="bold" size={14} color={colors.tabActiveBg}>Leaderboard</AppText>
-          <ChevronRight size={18} color={colors.tabActiveBg} />
+        <Pressable
+          onPress={onOpenLeaderboard}
+          style={({ pressed }) => [styles.lbButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Open the Leaderboard"
+        >
+          <AppText weight="bold" size={13} color={colors.tabActiveBg} maxFontSizeMultiplier={1.2}>Leaderboard</AppText>
+          <ChevronRight size={16} color={colors.tabActiveBg} />
         </Pressable>
       </LinearGradient>
 
+      {/* Invites card, like the live app: details on the left, three actions split by short dividers. */}
       <View style={styles.invites}>
         <View style={styles.invitesIcon}>
-          <Users size={22} color={colors.tabActiveBg} />
+          <Users size={20} color={colors.tabActiveBg} />
         </View>
         <View style={styles.flex}>
-          <AppText weight="bold" size={14} color={colors.navyText}>Total Invites (0)</AppText>
-          <AppText size={12} color={colors.mutedText}>
-            username: <AppText weight="bold" size={12} color={colors.tabActiveBg}>masud</AppText>
+          <AppText weight="bold" size={12.5} color={colors.navyText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+            Total Invites (0)
+          </AppText>
+          <AppText size={11.5} color={colors.mutedText} style={styles.sub} numberOfLines={1}>
+            username: <AppText weight="bold" size={11.5} color={colors.tabActiveBg}>masud</AppText>
           </AppText>
         </View>
         {[
           { label: 'Share', Icon: Share2 },
           { label: 'Copy', Icon: Copy },
           { label: 'QR Code', Icon: QrCode },
-        ].map(({ label, Icon }) => (
-          <View key={label} style={styles.inviteAction}>
-            <Icon size={18} color={colors.tabActiveBg} />
-            <AppText size={10.5} color={colors.tabInactiveText}>{label}</AppText>
+        ].map(({ label, Icon }, i) => (
+          <View key={label} style={styles.inviteActionWrap}>
+            {i > 0 ? <View style={styles.inviteDivider} /> : null}
+            <View style={styles.inviteAction}>
+              <Icon size={18} color={colors.tabActiveBg} />
+              <AppText size={10.5} color={colors.navyText} maxFontSizeMultiplier={1.2}>{label}</AppText>
+            </View>
           </View>
         ))}
       </View>
@@ -110,14 +124,15 @@ export function RewardsScreen({ onOpenLeaderboard }: Props) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.screenBg },
-  content: { paddingHorizontal: 16, paddingBottom: 24 },
+  content: { paddingHorizontal: 16, paddingBottom: 48 },
   flex: { flex: 1 },
   title: { textAlign: 'center', marginBottom: 16, letterSpacing: 0.5 },
-  bonusCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 18 },
+  bonusCard: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 18, paddingHorizontal: 14, borderRadius: 18 },
+  pressed: { opacity: 0.85 },
   giftCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -126,31 +141,35 @@ const styles = StyleSheet.create({
   lbButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 14,
-    height: 44,
-    borderRadius: 22,
+    gap: 2,
+    paddingLeft: 14,
+    paddingRight: 10,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.white,
   },
   invites: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
     marginTop: 14,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: 18,
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.tabsBorder,
   },
   invitesIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#E8F0FC',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  inviteActionWrap: { flexDirection: 'row', alignItems: 'center' },
+  inviteDivider: { width: 1, height: 28, backgroundColor: colors.tabsBorder, marginRight: 6 },
   inviteAction: { alignItems: 'center', gap: 4, paddingHorizontal: 4 },
   bonusHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 22 },
   reminder: { flexDirection: 'row', alignItems: 'center', gap: 6 },

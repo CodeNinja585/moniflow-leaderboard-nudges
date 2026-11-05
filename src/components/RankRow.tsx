@@ -87,7 +87,15 @@ function RankRowBase({ entry, variant }: Props) {
         </View>
         <View style={[styles.chip, { backgroundColor: v.chipBg }]}>
           <AppText size={8.5} color={colors.cashChipLabel}>Cashback</AppText>
-          <AppText weight="extraBold" size={13} color={v.chipValue} style={styles.amount}>
+          <AppText
+            weight="extraBold"
+            size={13}
+            color={v.chipValue}
+            style={styles.amount}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
             {formatNaira(entry.amount)}
           </AppText>
         </View>

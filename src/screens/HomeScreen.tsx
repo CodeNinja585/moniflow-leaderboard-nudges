@@ -5,17 +5,27 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeftRight,
   Bell,
+  Building2,
+  ChevronDown,
   ChevronRight,
   CirclePlus,
   Clock,
+  Copy,
+  CreditCard,
   Eye,
-  Landmark,
+  FileText,
+  Gift,
+  HandCoins,
   LayoutGrid,
   Link,
+  Pencil,
+  Radio,
   SlidersHorizontal,
   Smartphone,
   Signal,
+  Ticket,
   Tv,
+  Volleyball,
   Zap,
 } from 'lucide-react-native';
 import { AppText } from '../components/AppText';
@@ -43,8 +53,19 @@ const MENU: { label: string; Icon: typeof Zap; type?: PayType }[] = [
   { label: 'Payment Link', Icon: Link },
   { label: 'Add Money', Icon: CirclePlus },
   { label: 'To MoniFlow', Icon: ArrowLeftRight },
-  { label: 'To Bank', Icon: Landmark },
+  { label: 'To Bank', Icon: Building2 },
+  { label: 'ATM Transfer', Icon: CreditCard },
+  { label: 'PushPay', Icon: Radio },
+  { label: 'Gift Voucher', Icon: Gift },
+  { label: 'Auto To Bank', Icon: Clock },
+  { label: 'Account Statement', Icon: FileText },
+  { label: 'Cashback Exchange', Icon: HandCoins },
+  { label: 'Betting', Icon: Volleyball },
+  { label: 'Lottery', Icon: Ticket },
 ];
+
+/** Light tint inside each menu icon, close to the live app's filled icons without a new icon package. */
+const ICON_TINT = '#CFE0FA';
 
 export function HomeScreen({ onOpenLeaderboard }: Props) {
   const insets = useSafeAreaInsets();
@@ -134,16 +155,25 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
               </View>
               <AppText weight="bold" size={15} color={colors.white}>Wema Bank</AppText>
             </View>
-            <AppText size={13} color={colors.headerSubtitle}>90 1234 5678</AppText>
+            <View style={styles.accountRow}>
+              <AppText size={13} color={colors.headerSubtitle}>9012345678</AppText>
+              <Copy size={15} color={colors.white} />
+            </View>
           </View>
-          <View style={[styles.rowBetween, styles.balanceBody]}>
+          <View style={[styles.rowBetween, styles.availableRow]}>
             <View>
               <AppText size={12} color={colors.headerSubtitle}>Available Balance</AppText>
               <View style={styles.bankRow}>
                 <AppText weight="bold" size={18} color={colors.white} style={styles.stars}>****</AppText>
                 <Eye size={18} color={colors.white} />
               </View>
-              <AppText size={12} color={colors.headerSubtitle} style={styles.cashbackLabel}>Cashback Balance</AppText>
+            </View>
+            <ChevronDown size={20} color={colors.white} />
+          </View>
+          <View style={styles.cardDivider} />
+          <View style={[styles.rowBetween, styles.balanceBody]}>
+            <View>
+              <AppText size={12} color={colors.headerSubtitle}>Cashback Balance</AppText>
               <AppText weight="bold" size={15} color={colors.white} style={styles.stars}>****</AppText>
             </View>
             <View style={styles.pills}>
@@ -176,8 +206,12 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
             <View style={styles.bankRow}>
               <LayoutGrid size={18} color={colors.tabActiveBg} />
               <AppText weight="extraBold" size={17} color={colors.navyText}>Switch Menu</AppText>
+              <ChevronDown size={18} color={colors.navyText} />
             </View>
-            <AppText weight="medium" size={13} color={colors.tabActiveBg}>Customize</AppText>
+            <View style={styles.accountRow}>
+              <AppText weight="medium" size={13} color={colors.tabActiveBg}>Customize</AppText>
+              <Pencil size={15} color={colors.tabActiveBg} />
+            </View>
           </View>
           <View style={styles.grid}>
             {MENU.map(({ label, Icon, type }) => (
@@ -187,8 +221,16 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
                 style={({ pressed }) => [styles.menuTile, pressed && type && styles.pressed]}
                 accessibilityRole="button"
               >
-                <Icon size={22} color={colors.tabActiveBg} />
-                <AppText size={11.5} color={colors.navyText} style={styles.menuLabel}>{label}</AppText>
+                <Icon size={22} color={colors.tabActiveBg} fill={ICON_TINT} strokeWidth={2.1} />
+                <AppText
+                  size={11.5}
+                  color={colors.navyText}
+                  style={styles.menuLabel}
+                  numberOfLines={2}
+                  maxFontSizeMultiplier={1.2}
+                >
+                  {label}
+                </AppText>
               </Pressable>
             ))}
           </View>
@@ -211,7 +253,7 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.screenBg },
-  scroll: { paddingBottom: 24 },
+  scroll: { paddingBottom: 48 },
   flex: { flex: 1 },
   header: {
     height: 210,
@@ -261,9 +303,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  balanceBody: { marginTop: 14, alignItems: 'flex-end' },
+  balanceBody: { alignItems: 'flex-end' },
+  accountRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  availableRow: { marginTop: 14 },
+  cardDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.16)', marginVertical: 12 },
   stars: { letterSpacing: 2, marginTop: 4 },
-  cashbackLabel: { marginTop: 10 },
   pills: { gap: 8 },
   pill: {
     flexDirection: 'row',
@@ -280,18 +324,22 @@ const styles = StyleSheet.create({
   menuTile: {
     width: '22.5%',
     flexGrow: 1,
-    height: 80,
+    minHeight: 96,
+    paddingTop: 20,
+    paddingBottom: 8,
+    paddingHorizontal: 4,
     borderRadius: 16,
     backgroundColor: colors.white,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    gap: 10,
     shadowColor: colors.navyText,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
-  menuLabel: { textAlign: 'center' },
+  // Two-line slot for every label, so "Payment Link" and "To MoniFlow" wrap inside the tile
+  // and all eight labels start at the same height.
+  menuLabel: { textAlign: 'center', lineHeight: 14, minHeight: 28, alignSelf: 'stretch' },
   pressed: { opacity: 0.85 },
 });

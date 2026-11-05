@@ -252,15 +252,36 @@ export interface PositionChange {
   onBoardBefore: boolean;
   onBoardAfter: boolean;
   amountAfter: number;
+  /** Cashback this payment earns; lets us tell "newly qualified" from "already qualified". */
+  cashback?: number;
 }
 
-/** The single "where you'll be after this payment" line, e.g. "you'll be 10th". */
+/**
+ * The single "where you'll be after this payment" line, one wording per situation:
+ * under the minimum, newly qualified, still outside the Top 20, entering the Top 20,
+ * moving up a prize tier, moving up within a tier, or holding a spot.
+ */
 export function positionAfter(c: PositionChange): string {
-  if (c.onBoardAfter) {
-    const moved = !c.onBoardBefore || c.rankAfter < c.rankBefore;
-    return moved ? `you'll be ${ordinal(c.rankAfter)}` : `you'll stay ${ordinal(c.rankAfter)}`;
+  const amountBefore = round2(c.amountAfter - (c.cashback ?? 0));
+  const prizeAfter = nairaWhole(getPrizeForRank(c.rankAfter));
+
+  if (!c.onBoardAfter) {
+    if (c.amountAfter < MIN_ELIGIBLE_CASHBACK) {
+      return `you'll still need ${naira(round2(MIN_ELIGIBLE_CASHBACK - c.amountAfter))} more to qualify`;
+    }
+    return amountBefore < MIN_ELIGIBLE_CASHBACK
+      ? "you'll qualify for this week's prizes"
+      : "you'll be closer, but still outside the Top 20";
   }
-  return c.amountAfter >= MIN_ELIGIBLE_CASHBACK
-    ? "you'll qualify, but not make the Top 20 yet"
-    : `you'll still be under the ${nairaWhole(MIN_ELIGIBLE_CASHBACK)} minimum`;
+
+  if (!c.onBoardBefore) {
+    return `you'll enter the Top 20 at ${ordinal(c.rankAfter)} and win ${prizeAfter}`;
+  }
+  if (c.rankAfter < c.rankBefore) {
+    const tierUp = getPrizeForRank(c.rankAfter) > getPrizeForRank(c.rankBefore);
+    return tierUp
+      ? `you'll move from ${ordinal(c.rankBefore)} to ${ordinal(c.rankAfter)} and your prize rises to ${prizeAfter}`
+      : `you'll move from ${ordinal(c.rankBefore)} to ${ordinal(c.rankAfter)} and keep your ${prizeAfter} prize`;
+  }
+  return `you'll stay ${ordinal(c.rankAfter)} with a bigger lead, keeping ${prizeAfter}`;
 }

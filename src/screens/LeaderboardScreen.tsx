@@ -29,9 +29,18 @@ interface Props {
   onBack?: () => void;
 }
 
+/**
+ * Each demo scenario gets a fresh board: keying on the scenario version remounts it, so scroll
+ * position, measurements and the native scroll binding can never carry over from the last state.
+ */
 export function LeaderboardScreen({ onBack }: Props) {
+  const { scenarioVersion } = useDemo();
+  return <LeaderboardBoard key={scenarioVersion} onBack={onBack} />;
+}
+
+function LeaderboardBoard({ onBack }: Props) {
   // Board, user and nudge are shared with Home, so purchases anywhere move Masud here too.
-  const { scenarioKey, scenarioVersion, cycleScenario, ranked, recs, nudge, simulate, completePurchase } = useDemo();
+  const { scenarioKey, cycleScenario, ranked, recs, nudge, simulate, completePurchase } = useDemo();
   const scenario = scenarios[scenarioKey];
   const { board, onBoard } = ranked;
   const currentUser = ranked.user;
@@ -55,16 +64,13 @@ export function LeaderboardScreen({ onBack }: Props) {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [userBlock, setUserBlock] = useState<{ y: number; h: number } | null>(null);
   const [showScrolledCaption, setShowScrolledCaption] = useState(false);
-
-  // Reset scroll position and caches whenever the demo scenario changes.
+  // If the user's row has not been measured shortly after mount, show the dock anyway,
+  // so Masud's row and nudge are never missing from the screen.
+  const [measureTimedOut, setMeasureTimedOut] = useState(false);
   useEffect(() => {
-    autoScrolled.current = false;
-    animateScroll.current = false;
-    setUserBlock(null);
-    scrollY.setValue(0);
-    setShowScrolledCaption(false);
-    setPurchase(null);
-  }, [scenarioVersion, scrollY]);
+    const t = setTimeout(() => setMeasureTimedOut(true), 400);
+    return () => clearTimeout(t);
+  }, []);
 
   // Tapping Buy or Hold opens the payment sheet. The user can switch to another service there.
   const onNudgePress = useCallback((n: Nudge) => setPurchase({ nudge: n, recs }), [recs]);
@@ -89,6 +95,8 @@ export function LeaderboardScreen({ onBack }: Props) {
           const target = Math.max(0, y - ROWS_ABOVE_USER * rowStep);
           const animated = animateScroll.current;
           requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: target, animated }));
+          // Android can drop a scroll request made right after mount; repeat it once.
+          if (!animated) setTimeout(() => scrollRef.current?.scrollTo({ y: target, animated: false }), 150);
           setShowScrolledCaption(true);
         }
       }
@@ -106,7 +114,7 @@ export function LeaderboardScreen({ onBack }: Props) {
   const DOCK_HIDDEN_OFFSET = 260;
   const dockTranslate = useMemo(() => {
     if (!onBoard) return 0;
-    if (!userBlock || viewportHeight === 0) return DOCK_HIDDEN_OFFSET;
+    if (!userBlock || viewportHeight === 0) return measureTimedOut ? 0 : DOCK_HIDDEN_OFFSET;
     const appearBelow = userBlock.y - viewportHeight; // row is below the viewport before this
     const appearAbove = userBlock.y + userBlock.h; // row is above the viewport after this
     return scrollY.interpolate({
@@ -114,7 +122,7 @@ export function LeaderboardScreen({ onBack }: Props) {
       outputRange: [0, DOCK_HIDDEN_OFFSET, DOCK_HIDDEN_OFFSET, 0],
       extrapolate: 'clamp',
     });
-  }, [onBoard, userBlock, viewportHeight, scrollY]);
+  }, [onBoard, userBlock, viewportHeight, scrollY, measureTimedOut]);
   const showDock = track === 'cashback' && nudge !== null;
 
   return (
@@ -149,7 +157,6 @@ export function LeaderboardScreen({ onBack }: Props) {
           ) : null}
 
           <Animated.ScrollView
-            key={`${scenarioKey}-${scenarioVersion}`}
             ref={scrollRef}
             style={styles.list}
             contentContainerStyle={[

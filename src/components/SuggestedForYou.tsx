@@ -9,8 +9,8 @@ import type { ServiceRecommendation } from '../data/mockRecommendations';
 const ICONS = { airtime: Smartphone, data: Signal, electricity: Zap, cable: Tv, bank_transfer: Landmark };
 const TITLES = { airtime: 'Airtime', data: 'Data', electricity: 'Electricity', cable: 'Cable TV', bank_transfer: 'Transfer' };
 
-/** "0803 123 4567" style masking: first 4 and last 3 digits. */
-const mask = (t: string) => `${t.slice(0, 4)}...${t.slice(-3)}`;
+/** Last 4 digits only, so phone and account numbers fit the tile without a cut-off. */
+const mask = (t: string) => `\u2022\u2022${t.slice(-4)}`;
 const shortProvider = (p: string) => p.replace(' Electric', '');
 
 interface Props {
@@ -42,10 +42,10 @@ export function SuggestedForYou({ recs, leaderboardLine, resetKey, onPick, onOpe
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
-        <AppText weight="extraBold" size={17} color={colors.navyText} style={styles.flex}>
-          Suggested for you
-        </AppText>
-        <AppText size={12} color={colors.mutedText}>Based on your activity</AppText>
+        <View style={styles.flex}>
+          <AppText weight="extraBold" size={17} color={colors.navyText}>Suggested for you</AppText>
+          <AppText size={12} color={colors.mutedText} style={styles.subtitle}>Based on your activity</AppText>
+        </View>
         <Pressable
           onPress={() => setHidden(true)}
           hitSlop={10}
@@ -80,7 +80,7 @@ export function SuggestedForYou({ recs, leaderboardLine, resetKey, onPick, onOpe
               </View>
               <AppText weight="bold" size={13.5} color={colors.navyText}>{TITLES[r.type]}</AppText>
               <AppText size={11} color={colors.mutedText} numberOfLines={1}>
-                {shortProvider(r.provider)}, {mask(r.target)}
+                {shortProvider(r.provider)} {mask(r.target)}
               </AppText>
               <AppText weight="bold" size={10.5} color={earns ? colors.cashChipValue : colors.mutedText}>
                 {earns ? 'Earn cashback' : 'No cashback'}
@@ -93,7 +93,7 @@ export function SuggestedForYou({ recs, leaderboardLine, resetKey, onPick, onOpe
       {leaderboardLine ? (
         <Pressable onPress={onOpenLeaderboard} style={styles.lbLine} accessibilityRole="link">
           <Trophy size={16} color="#0B7A6E" />
-          <AppText weight="semiBold" size={12} color="#0B5F56" style={styles.flex} numberOfLines={1}>
+          <AppText weight="semiBold" size={12} color="#0B5F56" style={styles.flex} numberOfLines={2}>
             {leaderboardLine}
           </AppText>
           <ChevronRight size={16} color="#0B7A6E" />
@@ -106,6 +106,7 @@ export function SuggestedForYou({ recs, leaderboardLine, resetKey, onPick, onOpe
 const styles = StyleSheet.create({
   wrap: { gap: 10 },
   flex: { flex: 1 },
+  subtitle: { marginTop: 2 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dismiss: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   tiles: { flexDirection: 'row', gap: 10 },
