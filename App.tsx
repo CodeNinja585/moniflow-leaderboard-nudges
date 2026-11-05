@@ -15,6 +15,7 @@ import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { RewardsScreen } from './src/screens/RewardsScreen';
 import { BottomNav } from './src/components/BottomNav';
+import { RecommendationsProvider } from './src/state/RecommendationsContext';
 import { DemoProvider } from './src/state/DemoContext';
 import { colors } from './src/theme/tokens';
 
@@ -68,6 +69,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      <RecommendationsProvider>
       <DemoProvider>
         <View style={{ flex: 1, backgroundColor: colors.screenBg }}>
           {screen === 'leaderboard' ? (
@@ -90,6 +92,7 @@ export default function App() {
         </View>
         <StatusBar style={screen === 'rewards' ? 'dark' : 'light'} />
       </DemoProvider>
+      </RecommendationsProvider>
     </SafeAreaProvider>
   );
 }

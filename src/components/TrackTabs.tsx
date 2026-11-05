@@ -10,10 +10,12 @@ const ICONS = { cashback: CreditCard, referrals: Users, volume: ChartNoAxesColum
 interface Props {
   summaries: TrackSummary[];
   active: Track;
+  /** True while the API call is running, so ranks show a dash instead of a wrong "Not ranked". */
+  loading?: boolean;
   onChange: (track: Track) => void;
 }
 
-export function TrackTabs({ summaries, active, onChange }: Props) {
+export function TrackTabs({ summaries, active, loading, onChange }: Props) {
   return (
     <View style={styles.container}>
       {summaries.map(({ track, userRank }) => {
@@ -43,7 +45,7 @@ export function TrackTabs({ summaries, active, onChange }: Props) {
               color={isActive ? colors.tabActiveSub : colors.mutedText}
               style={styles.sub}
             >
-              {userRank === null ? 'Not ranked' : `#${userRank}`}
+              {loading ? '...' : userRank === null ? 'Not ranked' : `#${userRank}`}
             </AppText>
           </Pressable>
         );

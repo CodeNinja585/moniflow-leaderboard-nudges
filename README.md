@@ -5,7 +5,7 @@ A frontend-only Expo React Native demo for **Moniflow**, the NetApps Technologie
 1. **Leaderboard nudges.** The weekly cashback leaderboard tells the user the cheapest transaction that gets them to the next prize tier, holds their spot, breaks them into the Top 20, or gets them over the ₦10 minimum.
 2. **Recommendations.** Home shows the user's top 3 most frequent transactions ("Suggested for you"), from the data team's recommendation engine.
 
-There is **no backend**. Every number comes from mock data in `src/data/`, and the nudge maths runs on the phone in `src/lib/nudgeEngine.ts`. The demo user is **Masud Hashim** on every screen.
+The board, nudges and payment sheet use mock data in `src/data/`. Home recommendations and leaderboard ranks/messages come from the recommendation API (see `.env.example`), and the nudge maths runs on the phone in `src/lib/nudgeEngine.ts`. The demo user is **Masud Hashim** on every screen.
 
 ## Run it
 

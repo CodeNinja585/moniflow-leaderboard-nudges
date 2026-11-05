@@ -3,7 +3,7 @@
 ## What this is
 A frontend-only demo of the Leaderboard screen for **Moniflow**, NetApps Technologies' app (the slides call it "Money Flow"; same app, the correct name is Moniflow).
 The leaderboard gets AI "nudges": personalised messages that tell a user exactly what transaction gets them into the next prize tier.
-There is no backend. All data is mocked locally.
+The leaderboard board, nudges and payment sheet use local mock data. Home recommendations and the three leaderboard rank cards (cashback, referrals, volume) come from the NetApps recommendation API (`src/api/recommend.ts`, config in git-ignored `.env.local`, see `.env.example`). The app shows API messages exactly as received.
 
 Stack: Expo SDK 57, React Native, TypeScript (blank-typescript template). Target: Android APK via EAS Build (preview profile, buildType apk). No AAB, no iOS.
 
@@ -36,9 +36,9 @@ In scope:
 - Payment sheet (`PurchaseSheet` + `PinPad`) mirrors the live Confirm Purchase screen: order summary, service charge, Apply Cashback toggle (no effect on the maths), shuffled PIN keypad (any 4 digits accepted in the demo), a small fingerprint icon beside the PIN boxes (expo-local-authentication), a typed amount field with min and daily-limit checks, and a Back arrow (and Android back) that steps back through earlier choices before closing. One recommendation per sheet (data team, 9 Oct): the "Pay for" switcher exists but is off (`allowSwitching`). Users can change the amount or plan; one message shows where they will be after paying (`positionAfter` in nudgeEngine).
 
 - App flow (`App.tsx`): Home (Suggested for you + Switch Menu) and Rewards share a bottom nav; Rewards' Leaderboard button and Home's leaderboard line open the Leaderboard. Android back steps back. Scenario, user and nudge live in `src/state/DemoContext.tsx`, so a purchase on any screen moves Masud on the board. Long-press the Week badge to cycle the 5 demo states (rank up, hold, break in, under minimum, empty); the board remounts on every switch, and if Masud's row is not measured within 400 ms the docked row shows anyway, so his row and nudge are always on screen.
-- Home "Suggested for you" (Figma option A plus a dismiss X): the user's top 3 from the recommendation engine, the usual one marked with a "Usual" tag (no outline); tapping one, or Electricity/Airtime/Data/Cable in the Switch Menu, opens the same payment sheet sized to the current leaderboard goal. The line under the tiles reads "After ₦250 MTN airtime, you'll be 10th".
+- Home "Recommended for you": three cards from the API (`type`, `provider` underneath), in the order received, with a demo user picker (masud, edwino, chimuamandao). Taps are demo only (an alert). The line under the cards is the API cashback message. Leaderboard tabs show the API rank, and the active tab shows its API card (rank badge, #1 gets a celebration style, message as received). The board and nudge strips below are sample data.
 
-Out of scope: Variant A, any real API calls, auth, iOS, betting, deposits, wallet top-ups and vouchers as suggestions.
+Out of scope: Variant A, API calls other than the recommendation API, auth (the demo user picker only sends one of three staff IDs), iOS, betting, deposits, wallet top-ups and vouchers as suggestions.
 
 ## Business rules (from the live app, these win over the slides)
 - Only the Top 20 appear on the board.
