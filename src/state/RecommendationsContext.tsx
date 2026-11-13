@@ -1,27 +1,29 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { getRecommendations, RecommendResult } from '../api/recommend';
+import { useSessionUser } from './SessionContext';
 
 type Status = 'loading' | 'done';
 
 interface RecommendationsState {
-  userId: string;
-  setUserId: (id: string) => void;
+  userId: number;
   status: Status;
   result: RecommendResult | null;
   /** True while a refresh is running, so pull-to-refresh can show its spinner. */
   refreshing: boolean;
   refresh: () => void;
+  /** Try again after a failure: shows the loading state again, so the tap is visibly doing something. */
+  retry: () => void;
 }
 
 const Ctx = createContext<RecommendationsState | null>(null);
 
 /**
- * One API response for Home and Leaderboard. Fetched when the app opens, when the user changes,
+ * One API response for Home and Leaderboard. Fetched when the signed-in user's session starts,
  * and when the app returns from the background. Screens reuse it; only pull-to-refresh calls again.
  */
 export function RecommendationsProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState('masud');
+  const userId = useSessionUser().customerId;
   const [result, setResult] = useState<RecommendResult | null>(null);
   const [status, setStatus] = useState<Status>('loading');
   const [refreshing, setRefreshing] = useState(false);
@@ -29,7 +31,7 @@ export function RecommendationsProvider({ children }: { children: ReactNode }) {
   const latest = useRef(0);
 
   const load = useCallback(
-    async (id: string, mode: 'initial' | 'refresh') => {
+    async (id: number, mode: 'initial' | 'refresh') => {
       const call = ++latest.current;
       if (mode === 'initial') setStatus('loading');
       else setRefreshing(true);
@@ -54,10 +56,11 @@ export function RecommendationsProvider({ children }: { children: ReactNode }) {
   }, [userId, load]);
 
   const refresh = useCallback(() => load(userId, 'refresh'), [userId, load]);
+  const retry = useCallback(() => load(userId, 'initial'), [userId, load]);
 
   const value = useMemo(
-    () => ({ userId, setUserId, status, result, refreshing, refresh }),
-    [userId, status, result, refreshing, refresh],
+    () => ({ userId, status, result, refreshing, refresh, retry }),
+    [userId, status, result, refreshing, refresh, retry],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

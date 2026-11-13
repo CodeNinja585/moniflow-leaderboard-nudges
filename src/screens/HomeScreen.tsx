@@ -20,6 +20,7 @@ import {
   Link,
   Pencil,
   Radio,
+  Repeat,
   SlidersHorizontal,
   Smartphone,
   Signal,
@@ -32,11 +33,10 @@ import { AppText } from '../components/AppText';
 import { SuggestedForYou } from '../components/SuggestedForYou';
 import { PurchaseRequest, PurchaseSheet } from '../components/PurchaseSheet';
 import { colors } from '../theme/tokens';
-import { ordinal, PaySource, positionAfter, sizeOffer } from '../lib/nudgeEngine';
-import { formatNaira } from '../lib/format';
+import { PaySource, sizeOffer } from '../lib/nudgeEngine';
 import { DEFAULT_TARGETS } from '../data/productCatalog';
 import { useDemo } from '../state/DemoContext';
-import type { ServiceRecommendation } from '../data/mockRecommendations';
+import { useSession, useSessionUser } from '../state/SessionContext';
 import type { Nudge, Offer } from '../types/leaderboard';
 
 interface Props {
@@ -69,7 +69,9 @@ const ICON_TINT = '#CFE0FA';
 
 export function HomeScreen({ onOpenLeaderboard }: Props) {
   const insets = useSafeAreaInsets();
-  const { recs, nudge, ranked, scenarioVersion, simulate, completePurchase } = useDemo();
+  const profile = useSessionUser();
+  const { signOut } = useSession();
+  const { recs, nudge, simulate, completePurchase } = useDemo();
   const [purchase, setPurchase] = useState<PurchaseRequest | null>(null);
 
   // Any purchase from Home is sized to the user's current leaderboard goal, and shows its effect.
@@ -94,13 +96,9 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
 
   const target = nudge?.cashbackTarget ?? 1;
 
-  const onPickSuggestion = (rec: ServiceRecommendation) => {
-    const offer = sizeOffer(rec, target);
-    if (!offer) {
-      Alert.alert('Bank transfer', `Opens the transfer screen for ${rec.targetName ?? rec.target}. Transfers are outside this demo.`);
-      return;
-    }
-    open(offer);
+  // Taps are demo only: the real purchase flow is not part of the recommendations API demo.
+  const onPickRecommendation = (type: string, provider: string | null) => {
+    Alert.alert(type, `${provider ? `${provider}. ` : ''}Opens the ${type} screen in the real app. Purchases are outside this demo.`);
   };
 
   const onMenu = (type?: PayType) => {
@@ -116,15 +114,6 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
     if (offer) open(offer);
   };
 
-  // One message: where the user would be after their suggested transaction.
-  const leaderboardLine = (() => {
-    if (!nudge) return ranked.onBoard ? `You're ${ordinal(ranked.user.rank)} on the leaderboard` : null;
-    const o = nudge.offer;
-    const amount = formatNaira(o.spend, { decimals: false });
-    const after = positionAfter(simulate(o));
-    return `After ${amount} ${o.label}, ${after}`;
-  })();
-
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -134,12 +123,16 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
         >
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
-              <AppText weight="bold" size={17} color={colors.white}>MH</AppText>
+              <AppText weight="bold" size={17} color={colors.white}>{profile.initials}</AppText>
             </View>
             <View style={styles.flex}>
               <AppText size={13} color={colors.headerSubtitle}>Welcome back,</AppText>
-              <AppText weight="bold" size={18} color={colors.white}>Masud Hashim</AppText>
+              <AppText weight="bold" size={18} color={colors.white}>{profile.name}</AppText>
             </View>
+            <Pressable style={styles.switchUser} onPress={signOut} accessibilityRole="button" accessibilityLabel="Switch user">
+              <Repeat size={14} color={colors.white} />
+              <AppText weight="semiBold" size={11} color={colors.white}>Switch user</AppText>
+            </Pressable>
             <Pressable style={styles.bell} accessibilityLabel="Notifications">
               <Bell size={24} color={colors.white} />
               <View style={styles.bellDot} />
@@ -191,14 +184,8 @@ export function HomeScreen({ onOpenLeaderboard }: Props) {
           </View>
         </LinearGradient>
 
-        <View style={styles.section}>
-          <SuggestedForYou
-            recs={recs}
-            leaderboardLine={leaderboardLine}
-            resetKey={scenarioVersion}
-            onPick={onPickSuggestion}
-            onOpenLeaderboard={onOpenLeaderboard}
-          />
+        <View style={[styles.section, styles.recsSection]}>
+          <SuggestedForYou onPick={onPickRecommendation} onOpenLeaderboard={onOpenLeaderboard} />
         </View>
 
         <View style={styles.section}>
@@ -272,6 +259,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  switchUser: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)' },
   bell: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   bellDot: {
     position: 'absolute',
@@ -283,7 +271,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.belowPlate,
   },
   balanceCard: {
-    marginTop: -104,
+    marginTop: -80,
     marginHorizontal: 16,
     padding: 16,
     borderRadius: 22,
@@ -320,6 +308,7 @@ const styles = StyleSheet.create({
   pillOutline: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)' },
   pillFilled: { backgroundColor: 'rgba(255,255,255,0.16)' },
   section: { marginTop: 20, marginHorizontal: 16 },
+  recsSection: { gap: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
   menuTile: {
     width: '22.5%',

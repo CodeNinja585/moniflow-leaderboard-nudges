@@ -127,7 +127,12 @@ export interface RankedBoard {
  * Places the user among everyone else. Ties go against the user. Users under the
  * ₦10 minimum never appear on the board. Off-board users keep their known rank.
  */
-export function rankBoard(others: LeaderboardEntry[], user: LeaderboardEntry): RankedBoard {
+export function rankBoard(
+  others: LeaderboardEntry[],
+  user: LeaderboardEntry,
+  /** People under the minimum, who never reach the board but still count towards the user's position. */
+  belowMinimum: LeaderboardEntry[] = [],
+): RankedBoard {
   const sorted = [...others].sort((a, b) => b.amount - a.amount);
   const eligible = user.amount >= MIN_ELIGIBLE_CASHBACK;
   const firstBelow = sorted.findIndex((o) => user.amount > o.amount);
@@ -142,9 +147,10 @@ export function rankBoard(others: LeaderboardEntry[], user: LeaderboardEntry): R
   }
 
   const ordered = sorted.map((e, i) => ({ ...e, rank: i + 1 }));
+  const position = pos + (eligible ? 0 : belowMinimum.filter((o) => o.amount >= user.amount).length) + 1;
   return {
     board: ordered.slice(0, BOARD_SIZE),
-    user: { ...user, rank: eligible ? Math.max(user.rank, BOARD_SIZE + 1) : 0 },
+    user: { ...user, rank: eligible ? Math.max(user.rank, pos + 1) : 0, position },
     onBoard: false,
     ordered,
   };

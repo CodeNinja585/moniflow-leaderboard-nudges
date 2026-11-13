@@ -23,7 +23,6 @@ import { describeFailure } from '../api/recommend';
 import { useRecommendations } from '../state/RecommendationsContext';
 import { colors, sizes, spacing } from '../theme/tokens';
 import { getPrizeForRank, isTierBoundary } from '../lib/prizes';
-import { scenarios } from '../data/mockLeaderboard';
 import { useDemo } from '../state/DemoContext';
 import { MIN_ELIGIBLE_CASHBACK } from '../lib/prizes';
 import type { Nudge, Offer, Track, TrackSummary } from '../types/leaderboard';
@@ -39,17 +38,17 @@ interface Props {
  * position, measurements and the native scroll binding can never carry over from the last state.
  */
 export function LeaderboardScreen({ onBack }: Props) {
-  const { scenarioVersion } = useDemo();
-  return <LeaderboardBoard key={scenarioVersion} onBack={onBack} />;
+  const { boardKey } = useDemo();
+  return <LeaderboardBoard key={boardKey} onBack={onBack} />;
 }
 
 /** The API's card for the active tab. Hidden when the call succeeded with no suggestions. */
 function StandingSection({ track }: { track: Track }) {
-  const { status, result, refresh } = useRecommendations();
+  const { status, result, retry } = useRecommendations();
   if (status === 'loading' || !result) return <View style={styles.standing}><View style={styles.standingLoading} /></View>;
   if (!result.ok) {
     const f = describeFailure(result.status);
-    return <View style={styles.standing}><ApiNotice title={f.title} onRetry={f.retry ? refresh : undefined} /></View>;
+    return <View style={styles.standing}><ApiNotice title={f.title} onRetry={f.retry ? retry : undefined} /></View>;
   }
   const category = track === 'referrals' ? 'referrer' : track;
   const suggestion = result.suggestions.find((s) => s.category === category);
@@ -58,9 +57,8 @@ function StandingSection({ track }: { track: Track }) {
 }
 
 function LeaderboardBoard({ onBack }: Props) {
-  // Board, user and nudge are shared with Home, so purchases anywhere move Masud here too.
-  const { scenarioKey, cycleScenario, ranked, recs, nudge, simulate, completePurchase } = useDemo();
-  const scenario = scenarios[scenarioKey];
+  // Board, user and nudge are shared with Home, so purchases anywhere move the user here too.
+  const { week, cycleScenario, ranked, recs, nudge, simulate, completePurchase } = useDemo();
   const { board, onBoard } = ranked;
   const currentUser = ranked.user;
 
@@ -84,7 +82,7 @@ function LeaderboardBoard({ onBack }: Props) {
   const [userBlock, setUserBlock] = useState<{ y: number; h: number } | null>(null);
   const [showScrolledCaption, setShowScrolledCaption] = useState(false);
   // If the user's row has not been measured shortly after mount, show the dock anyway,
-  // so Masud's row and nudge are never missing from the screen.
+  // so the user's row and nudge are never missing from the screen.
   const [measureTimedOut, setMeasureTimedOut] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setMeasureTimedOut(true), 400);
@@ -147,8 +145,8 @@ function LeaderboardBoard({ onBack }: Props) {
   return (
     <View style={styles.screen}>
       <LeaderboardHeader
-        weekNumber={scenario.weekNumber}
-        endsIn={scenario.endsIn}
+        weekNumber={week.weekNumber}
+        endsIn={week.endsIn}
         onBack={onBack}
         onWeekLongPress={cycleScenario}
       />
@@ -193,7 +191,7 @@ function LeaderboardBoard({ onBack }: Props) {
               const isMe = entry.isCurrentUser;
               return (
                 <View
-                  key={isMe ? 'me' : entry.name}
+                  key={isMe ? 'me' : `${entry.rank}-${entry.name}`}
                   onLayout={isMe ? onUserLayout : undefined}
                 >
                   <View style={styles.rowGap}>

@@ -25,15 +25,12 @@ export type RecommendResult =
   | { ok: true; recommendations: ApiRecommendation[]; suggestions: ApiSuggestion[] }
   | { ok: false; status: number; error: string };
 
-/** The three staff accounts the demo back end accepts. Any other ID returns a 403. */
-export const DEMO_USERS = ['masud', 'edwino', 'chimuamandao'] as const;
-
-export async function getRecommendations(referralId: string): Promise<RecommendResult> {
+export async function getRecommendations(customerId: number): Promise<RecommendResult> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const res = await fetch(`${BASE_URL}/api/recommend?referralId=${encodeURIComponent(referralId)}`, {
+    const res = await fetch(`${BASE_URL}/api/recommend?customerId=${customerId}`, {
       headers: { 'X-API-Key': API_KEY },
       signal: controller.signal,
     });
@@ -62,7 +59,7 @@ export async function getRecommendations(referralId: string): Promise<RecommendR
 export function describeFailure(status: number): { title: string; retry: boolean } {
   switch (status) {
     case 400:
-      return { title: 'Request error. Referral ID missing.', retry: false };
+      return { title: 'Request error. Customer ID missing.', retry: false };
     case 401:
       return { title: 'Check the API key in your config.', retry: false };
     case 403:

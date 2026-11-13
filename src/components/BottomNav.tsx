@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gamepad2, Gift, Headphones, House, SlidersHorizontal } from 'lucide-react-native';
+import { CreditCard, Gift, Headphones, House, SlidersHorizontal } from 'lucide-react-native';
 import { AppText } from './AppText';
 import { colors } from '../theme/tokens';
 
-export type Tab = 'reward' | 'home';
+export type Tab = 'reward' | 'home' | 'pay';
 
 interface Props {
   active: Tab;
@@ -14,7 +14,7 @@ interface Props {
 
 const ITEMS = [
   { key: 'reward', label: 'Reward', Icon: Gift },
-  { key: 'games', label: 'Games', Icon: Gamepad2 },
+  { key: 'pay', label: 'RN Pay', Icon: CreditCard },
   { key: 'home', label: 'Home', Icon: House },
   { key: 'support', label: 'Support', Icon: Headphones },
   { key: 'settings', label: 'Settings', Icon: SlidersHorizontal },
@@ -26,11 +26,11 @@ export function BottomNav({ active, onChange }: Props) {
   return (
     <LinearGradient
       colors={[colors.headerBottom, colors.headerTop]}
-      style={[styles.bar, { paddingBottom: 10 + insets.bottom }]}
+      style={[styles.bar, { paddingBottom: 10 + insets.bottom, paddingTop: 40 }]}
     >
       {ITEMS.map(({ key, label, Icon }) => {
         const isActive = key === active;
-        const tappable = key === 'reward' || key === 'home';
+        const tappable = key === 'reward' || key === 'home' || key === 'pay';
         return (
           <Pressable
             key={key}

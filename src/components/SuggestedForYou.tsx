@@ -46,7 +46,7 @@ interface Props {
 
 /** Home's "Recommended for you" row. Everything here comes from the API, in the order received. */
 export function SuggestedForYou({ onPick, onOpenLeaderboard }: Props) {
-  const { status, result, refresh } = useRecommendations();
+  const { status, result, retry } = useRecommendations();
   const [hidden, setHidden] = useState(false);
 
   if (hidden) {
@@ -74,7 +74,7 @@ export function SuggestedForYou({ onPick, onOpenLeaderboard }: Props) {
     );
   } else if (!result.ok) {
     const f = describeFailure(result.status);
-    body = <ApiNotice title={f.title} onRetry={f.retry ? refresh : undefined} />;
+    body = <ApiNotice title={f.title} onRetry={f.retry ? retry : undefined} />;
   } else if (result.recommendations.length === 0) {
     body = <ApiNotice title="No recommendations yet." />;
   } else {
