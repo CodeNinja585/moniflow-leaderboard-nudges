@@ -3,6 +3,7 @@ import {
   Animated,
   LayoutAnimation,
   LayoutChangeEvent,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -16,9 +17,12 @@ import { DockedUserRow } from '../components/DockedUserRow';
 import { AppText } from '../components/AppText';
 import { BoardFooter } from '../components/BoardFooter';
 import { PurchaseRequest, PurchaseSheet } from '../components/PurchaseSheet';
+import { StandingCard } from '../components/StandingCard';
+import { ApiNotice } from '../components/ApiNotice';
+import { describeFailure } from '../api/recommend';
+import { useRecommendations } from '../state/RecommendationsContext';
 import { colors, sizes, spacing } from '../theme/tokens';
 import { getPrizeForRank, isTierBoundary } from '../lib/prizes';
-import { scenarios } from '../data/mockLeaderboard';
 import { useDemo } from '../state/DemoContext';
 import { MIN_ELIGIBLE_CASHBACK } from '../lib/prizes';
 import type { Nudge, Offer, Track, TrackSummary } from '../types/leaderboard';
@@ -34,24 +38,37 @@ interface Props {
  * position, measurements and the native scroll binding can never carry over from the last state.
  */
 export function LeaderboardScreen({ onBack }: Props) {
-  const { scenarioVersion } = useDemo();
-  return <LeaderboardBoard key={scenarioVersion} onBack={onBack} />;
+  const { boardKey } = useDemo();
+  return <LeaderboardBoard key={boardKey} onBack={onBack} />;
+}
+
+/** The API's card for the active tab. Hidden when the call succeeded with no suggestions. */
+function StandingSection({ track }: { track: Track }) {
+  const { status, result, retry } = useRecommendations();
+  if (status === 'loading' || !result) return <View style={styles.standing}><View style={styles.standingLoading} /></View>;
+  if (!result.ok) {
+    const f = describeFailure(result.status);
+    return <View style={styles.standing}><ApiNotice title={f.title} onRetry={f.retry ? retry : undefined} /></View>;
+  }
+  const category = track === 'referrals' ? 'referrer' : track;
+  const suggestion = result.suggestions.find((s) => s.category === category);
+  if (!suggestion) return null;
+  return <View style={styles.standing}><StandingCard suggestion={suggestion} /></View>;
 }
 
 function LeaderboardBoard({ onBack }: Props) {
-  // Board, user and nudge are shared with Home, so purchases anywhere move Masud here too.
-  const { scenarioKey, cycleScenario, ranked, recs, nudge, simulate, completePurchase } = useDemo();
-  const scenario = scenarios[scenarioKey];
+  // Board, user and nudge are shared with Home, so purchases anywhere move the user here too.
+  const { week, cycleScenario, ranked, recs, nudge, simulate, completePurchase } = useDemo();
   const { board, onBoard } = ranked;
   const currentUser = ranked.user;
 
-  const summaries: TrackSummary[] = useMemo(
-    () =>
-      scenario.summaries.map((s) =>
-        s.track === 'cashback' ? { ...s, userRank: onBoard ? currentUser.rank : null } : s,
-      ),
-    [scenario.summaries, onBoard, currentUser.rank],
-  );
+  // Ranks and messages come from the recommendation API; the board below is still demo data.
+  const { status, result, refreshing, refresh } = useRecommendations();
+  const suggestions = result?.ok ? result.suggestions : [];
+  const summaries: TrackSummary[] = (['cashback', 'referrals', 'volume'] as Track[]).map((t) => ({
+    track: t,
+    userRank: suggestions.find((s) => s.category === (t === 'referrals' ? 'referrer' : t))?.rank ?? null,
+  }));
 
   const [track, setTrack] = useState<Track>('cashback');
   const [purchase, setPurchase] = useState<PurchaseRequest | null>(null);
@@ -65,7 +82,7 @@ function LeaderboardBoard({ onBack }: Props) {
   const [userBlock, setUserBlock] = useState<{ y: number; h: number } | null>(null);
   const [showScrolledCaption, setShowScrolledCaption] = useState(false);
   // If the user's row has not been measured shortly after mount, show the dock anyway,
-  // so Masud's row and nudge are never missing from the screen.
+  // so the user's row and nudge are never missing from the screen.
   const [measureTimedOut, setMeasureTimedOut] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setMeasureTimedOut(true), 400);
@@ -128,31 +145,29 @@ function LeaderboardBoard({ onBack }: Props) {
   return (
     <View style={styles.screen}>
       <LeaderboardHeader
-        weekNumber={scenario.weekNumber}
-        endsIn={scenario.endsIn}
+        weekNumber={week.weekNumber}
+        endsIn={week.endsIn}
         onBack={onBack}
         onWeekLongPress={cycleScenario}
       />
 
       <View style={styles.body}>
-        <TrackTabs summaries={summaries} active={track} onChange={setTrack} />
+        <TrackTabs summaries={summaries} active={track} loading={status === 'loading'} onChange={setTrack} />
+
+        <StandingSection track={track} />
 
         {track !== 'cashback' ? (
-          <View style={styles.placeholder}>
-            <AppText weight="semiBold" size={13} color={colors.tabInactiveText}>
-              Coming soon
-            </AppText>
-            <AppText size={11} color={colors.mutedText} style={styles.placeholderSub}>
-              This leaderboard is on the way.
-            </AppText>
-          </View>
+          <ScrollView
+            style={styles.flex}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+          />
         ) : null}
 
         {/* Kept mounted while other tabs are open, so switching back is instant. */}
         <View style={[styles.flex, track !== 'cashback' && styles.hidden]}>
           {showScrolledCaption ? (
             <AppText size={10} color={colors.mutedText} style={styles.caption}>
-              Scrolled to you
+              Sample board. Scrolled to you
             </AppText>
           ) : null}
 
@@ -168,6 +183,7 @@ function LeaderboardBoard({ onBack }: Props) {
             onScrollBeginDrag={() => setShowScrolledCaption(false)}
             scrollEventThrottle={16}
             showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
           >
             {board.map((entry, i) => {
               const next = board[i + 1];
@@ -175,7 +191,7 @@ function LeaderboardBoard({ onBack }: Props) {
               const isMe = entry.isCurrentUser;
               return (
                 <View
-                  key={isMe ? 'me' : entry.name}
+                  key={isMe ? 'me' : `${entry.rank}-${entry.name}`}
                   onLayout={isMe ? onUserLayout : undefined}
                 >
                   <View style={styles.rowGap}>
@@ -236,6 +252,6 @@ const styles = StyleSheet.create({
   // The empty week card is taller than a docked row.
   listContentTallDock: { paddingBottom: 230 },
   rowGap: { marginTop: spacing.rowGap },
-  placeholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  placeholderSub: { marginTop: 4 },
+  standing: { marginTop: 12 },
+  standingLoading: { height: 84, borderRadius: 16, backgroundColor: colors.tabsBorder },
 });

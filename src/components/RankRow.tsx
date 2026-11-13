@@ -56,16 +56,16 @@ function RankRowBase({ entry, variant }: Props) {
       ]}
     >
       <View style={[styles.plate, { width: v.plateWidth, paddingRight: v.overlap }]}>
-        {variant === 'below' ? (
+        {variant === 'below' && !entry.position ? (
           <CircleAlert size={20} color={colors.white} />
         ) : (
           <>
             <View style={styles.rankRow}>
               <AppText weight="extraBold" size={17} color={colors.white} style={styles.rankNum}>
-                {entry.rank}
+                {variant === 'below' ? entry.position : entry.rank}
               </AppText>
               <AppText weight="extraBold" size={7.5} color={colors.white} style={styles.suffix}>
-                {ordinalSuffix(entry.rank)}
+                {ordinalSuffix(variant === 'below' && entry.position ? entry.position : entry.rank)}
               </AppText>
             </View>
             <Medal size={12} color={colors.white} />

@@ -49,6 +49,8 @@ export interface LeaderboardEntry {
   /** Naira for cashback; a count for referrals and volume. */
   amount: number;
   isCurrentUser: boolean;
+  /** Place among everyone this week, including people under the minimum. Only set on the user's own row. */
+  position?: number;
 }
 
 export interface TrackSummary {

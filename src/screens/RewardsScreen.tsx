@@ -5,6 +5,7 @@ import { Bell, Check, ChevronRight, Copy, Gift, QrCode, Share2, Users, X } from 
 import { AppText } from '../components/AppText';
 import { colors } from '../theme/tokens';
 import { formatNaira } from '../lib/format';
+import { useSessionUser } from '../state/SessionContext';
 
 interface Props {
   onOpenLeaderboard: () => void;
@@ -23,6 +24,7 @@ const TOTAL_BONUS = 16.75;
 
 /** Simplified copy of the live Rewards tab: the way into the Leaderboard. */
 export function RewardsScreen({ onOpenLeaderboard }: Props) {
+  const sessionUser = useSessionUser();
   const insets = useSafeAreaInsets();
   return (
     <ScrollView
@@ -65,7 +67,7 @@ export function RewardsScreen({ onOpenLeaderboard }: Props) {
             Total Invites (0)
           </AppText>
           <AppText size={11.5} color={colors.mutedText} style={styles.sub} numberOfLines={1}>
-            username: <AppText weight="bold" size={11.5} color={colors.tabActiveBg}>masud</AppText>
+            username: <AppText weight="bold" size={11.5} color={colors.tabActiveBg}>{sessionUser.id}</AppText>
           </AppText>
         </View>
         {[

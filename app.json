@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "moniflow-leaderboard-nudges",
-    "slug": "moniflow-leaderboard-nudges",
+    "slug": "moniflow",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -24,12 +24,34 @@
     },
     "plugins": [
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-dev-client",
+        {
+          "launchMode": "most-recent",
+          "defaultLaunchURL": "http://localhost:8081",
+          "android": {
+            "defaultLaunchURL": "http://10.0.2.2:8081"
+          },
+          "toolsButton": true,
+          "skipOnboarding": false,
+          "showMenuAtLaunch": true
+        }
+      ]
     ],
     "extra": {
       "eas": {
-        "projectId": "4a77904f-2ac1-46ff-89fe-3077abc2e06a"
+        "projectId": "0b5a122a-8fd3-47a4-b451-1da3811e80b2"
       }
-    }
+    },
+    "owner": "rahmlad"
   }
 }
